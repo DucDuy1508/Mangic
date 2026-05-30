@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh Toán Đơn Hàng - Mangic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
+    <style>
+        .pay-card { cursor: pointer; transition: all 0.2s; }
+        .pay-card:hover { border-color: #212529 !important; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+                <div class="card border-0 shadow-sm p-4 bg-white">
+                    <h2 class="fw-bold mb-4 text-center text-dark">TIẾN HÀNH THANH TOÁN</h2>
+                    
+                    <div class="row g-5">
+                        <div class="col-md-6 border-end">
+                            <h5 class="fw-bold mb-3 text-secondary"><i class="ti ti-location-pin me-1"></i> THÔNG TIN NHẬN HÀNG</h5>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Họ và tên người nhận</label>
+                                <input type="text" id="shipName" class="form-control" placeholder="Nhập tên người nhận...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Số điện thoại liên hệ</label>
+                                <input type="text" id="shipPhone" class="form-control" placeholder="Nhập số điện thoại...">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label small fw-semibold">Địa chỉ giao hàng chi tiết</label>
+                                <textarea id="shipAddress" class="form-control" rows="2" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
+                            </div>
+
+                            <h5 class="fw-bold mb-3 text-secondary"><i class="ti ti-wallet me-1"></i> PHƯƠNG THỨC THANH TOÁN</h5>
+                            <div class="row g-3 mb-4">
+                                <div class="col-6">
+                                    <div class="card p-3 pay-card border-2 border-dark" id="cardCOD" onclick="selectMethod('COD')">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="payMethod" id="methodCOD" value="COD" checked>
+                                            <label class="form-check-label fw-bold ms-1" for="methodCOD">Thanh toán COD</label>
+                                        </div>
+                                        <small class="text-muted mt-1">Trả tiền khi nhận hàng</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card p-3 pay-card border" id="cardQR" onclick="selectMethod('QR')">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="payMethod" id="methodQR" value="QR">
+                                            <label class="form-check-label fw-bold ms-1" for="methodQR">Chuyển khoản QR</label>
+                                        </div>
+                                        <small class="text-muted mt-1">Quét mã ngân hàng</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold mb-2 text-secondary">MÃ GIẢM GIÁ</h5>
+                            <div class="input-group mb-3">
+                                <input type="text" id="couponInput" class="form-control" placeholder="Nhập mã giảm giá (MANGIC10)...">
+                                <button class="btn btn-dark fw-bold" id="btnApplyCoupon">Áp dụng</button>
+                            </div>
+                            <div id="couponMessage" class="small fw-semibold mb-4"></div>
+
+                            <div id="membershipTierInfo"></div>
+
+                            <div class="border-top pt-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Tổng tiền hàng:</span>
+                                    <span id="txtOriginalTotal" class="fw-bold">0 đ</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 text-success">
+                                    <span>Giảm giá (Mã Coupon):</span>
+                                    <span id="txtDiscountAmount">-0 đ</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 text-primary">
+                                    <span>Ưu đãi hạng thành viên:</span>
+                                    <span id="txtMemberDiscount">-0 đ</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <span class="fw-bold fs-5">Số tiền cần thanh toán:</span>
+                                    <span id="txtFinalTotal" class="fw-bold fs-4 text-danger">0 đ</span>
+                                </div>
+                            </div>
+
+                            <button id="btnSubmitOrder" class="btn btn-dark w-100 fw-bold py-3 fs-5">
+                                <i class="ti ti-shopping-cart me-2"></i> HOÀN TẤT ĐẶT HÀNG
+                            </button>
+                        </div>
+
+                        <div class="col-md-6 text-center d-flex flex-column justify-content-center align-items-center" id="qrContainer" style="opacity: 0.3; pointer-events: none;">
+                            <div class="alert alert-warning text-center fw-bold w-100 mb-3 shadow-sm" id="countdownAlert">
+                                <i class="ti ti-alarm-clock me-2"></i> Thời gian giữ hàng còn lại: <span id="timer" class="text-danger">15:00</span>
+                            </div>
+
+                            <h5 class="fw-bold mb-3 text-secondary">QUÉT MÃ QR ĐỂ THANH TOÁN</h5>
+                            <div class="p-3 bg-white d-inline-block rounded shadow-sm border mb-3">
+                                <img id="qrcodeImg" src="" alt="Mã QR Thanh Toán" style="width: 220px; height: 220px; object-fit: contain;">
+                            </div>
+
+                            <div class="alert alert-info py-2 mx-auto small w-100" style="max-width: 320px;">
+                                <strong>Nội dung CK bắt buộc:</strong> <span id="txtOrderCode" class="text-danger fw-bold"></span>
+                            </div>
+
+                            <button id="btnConfirmPayment" class="btn btn-success w-100 fw-bold py-3 fs-5 mt-2 mb-2">
+                                <i class="ti ti-checkbox me-2"></i> XÁC NHẬN ĐÃ CHUYỂN KHOẢN
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button id="btnCancelOrder" class="btn btn-link text-muted text-decoration-none small">
+                            <i class="ti ti-arrow-left me-1"></i> Hủy đơn hàng & Quay lại trang chủ
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function selectMethod(method) {
+            document.getElementById('method' + method).checked = true;
+            const cardCOD = document.getElementById('cardCOD');
+            const cardQR = document.getElementById('cardQR');
+            const qrContainer = document.getElementById('qrContainer');
+
+            if (method === 'COD') {
+                cardCOD.className = "card p-3 pay-card border-2 border-dark";
+                cardQR.className = "card p-3 pay-card border";
+                qrContainer.style.opacity = "0.3";
+                qrContainer.style.pointerEvents = "none";
+            } else {
+                cardQR.className = "card p-3 pay-card border-2 border-dark";
+                cardCOD.className = "card p-3 pay-card border";
+                qrContainer.style.opacity = "1";
+                qrContainer.style.pointerEvents = "auto";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            if (!currentUser) { window.location.href = "dangnhap.html"; return; }
+
+            const cartKey = "cart_" + currentUser.username;
+            let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+            if (cart.length === 0) { window.location.href = "index.html"; return; }
+
+            let originalTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let finalTotal = originalTotal;
+            let discountAmount = 0;
+            let memberDiscountAmount = 0; 
+            let membershipDiscountPercent = 0; 
+            let membershipTierName = "Thành viên Đồng";
+            let appliedCode = "";
+            let currentOrderId = "";
+
+            const orderCode = "MGC" + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById("txtOrderCode").innerText = orderCode;
+
+            // Tự động kiểm tra chi tiêu để tính hạng thành viên và giảm giá thêm
+            fetch('http://localhost:5000/api/admin/customer-stats')
+            .then(res => res.json())
+            .then(stats => {
+                const myStat = stats.find(stat => stat._id === currentUser.username);
+                const totalSpent = myStat ? myStat.totalSpent : 0;
+
+                if (totalSpent >= 3000000) {
+                    membershipTierName = "Thành viên Kim Cương 💎";
+                    membershipDiscountPercent = 8;
+                } else if (totalSpent >= 1500000) {
+                    membershipTierName = "Thành viên Vàng 🥇";
+                    membershipDiscountPercent = 5;
+                } else if (totalSpent >= 500000) {
+                    membershipTierName = "Thành viên Bạc 🥈";
+                    membershipDiscountPercent = 2;
+                } else {
+                    membershipTierName = "Thành viên Đồng 🥉";
+                    membershipDiscountPercent = 0;
+                }
+
+                const tierContainer = document.getElementById("membershipTierInfo");
+                if (tierContainer && membershipDiscountPercent > 0) {
+                    tierContainer.innerHTML = `
+                        <div class="alert alert-info py-2 small fw-semibold mb-4 shadow-sm border-start border-info border-4">
+                            <i class="ti ti-crown me-1 text-warning"></i> Cấp độ: <span class="text-danger fw-bold">${membershipTierName}</span> (Hệ thống tự động giảm thêm ${membershipDiscountPercent}% vào tổng đơn hàng).
+                        </div>
+                    `;
+                }
+                updatePriceUI();
+            })
+            .catch(err => {
+                console.error("Lỗi lấy thông tin hạng thành viên:", err);
+                updatePriceUI();
+            });
+
+            function updatePriceUI() {
+                // Tính số tiền giảm giá dựa trên Hạng thành viên
+                memberDiscountAmount = Math.round(originalTotal * (membershipDiscountPercent / 100));
+                
+                // Trừ đồng thời cả tiền giảm Coupon và hạng VIP
+                finalTotal = originalTotal - discountAmount - memberDiscountAmount;
+                if (finalTotal < 0) finalTotal = 0;
+
+                document.getElementById("txtOriginalTotal").innerText = originalTotal.toLocaleString('vi-VN') + " đ";
+                document.getElementById("txtDiscountAmount").innerText = "-" + discountAmount.toLocaleString('vi-VN') + " đ";
+                document.getElementById("txtMemberDiscount").innerText = "-" + memberDiscountAmount.toLocaleString('vi-VN') + " đ";
+                document.getElementById("txtFinalTotal").innerText = finalTotal.toLocaleString('vi-VN') + " đ";
+
+                const bankId = "TPB";
+                const accountNo = "00001507698";
+                const accountName = "Nguyen%20Duc%20Duy";
+                const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${finalTotal}&addInfo=${orderCode}&accountName=${accountName}`;
+                document.getElementById("qrcodeImg").src = qrUrl;
+            }
+
+            // Áp dụng mã giảm giá bốc từ database MongoDB
+            document.getElementById("btnApplyCoupon").addEventListener("click", function() {
+                const code = document.getElementById("couponInput").value.trim().toUpperCase();
+                const msg = document.getElementById("couponMessage");
+
+                if (!code) {
+                    msg.className = "small fw-semibold mb-4 text-danger";
+                    msg.innerText = "Vui lòng nhập mã giảm giá.";
+                    return;
+                }
+
+                fetch('http://localhost:5000/api/admin/coupons')
+                .then(res => res.json())
+                .then(coupons => {
+                    const matchedCoupon = coupons.find(cp => cp.code === code);
+
+                    if (matchedCoupon) {
+                        if (matchedCoupon.usedCount >= matchedCoupon.usageLimit) {
+                            msg.className = "small fw-semibold mb-4 text-danger";
+                            msg.innerText = "Mã giảm giá này đã hết lượt sử dụng!";
+                            return;
+                        }
+
+                        if (matchedCoupon.endDate && new Date(matchedCoupon.endDate) < new Date()) {
+                            msg.className = "small fw-semibold mb-4 text-danger";
+                            msg.innerText = "Mã giảm giá này đã hết hạn sử dụng!";
+                            return;
+                        }
+
+                        if (matchedCoupon.applicableProducts && matchedCoupon.applicableProducts.length > 0) {
+                            const hasValidProduct = cart.some(item => matchedCoupon.applicableProducts.includes(item.name));
+                            if (!hasValidProduct) {
+                                msg.className = "small fw-semibold mb-4 text-danger";
+                                msg.innerText = "Mã này không áp dụng cho các sản phẩm trong giỏ hàng của bạn!";
+                                return;
+                            }
+                        }
+
+                        discountAmount = Math.round(originalTotal * (matchedCoupon.discountPercent / 100));
+                        appliedCode = code;
+
+                        msg.className = "small fw-semibold mb-4 text-success";
+                        msg.innerText = `Áp dụng thành công! Bạn được giảm ${matchedCoupon.discountPercent}% từ mã giảm giá.`;
+                        updatePriceUI();
+
+                    } else {
+                        discountAmount = 0;
+                        appliedCode = "";
+                        msg.className = "small fw-semibold mb-4 text-danger";
+                        msg.innerText = "Mã giảm giá không chính xác hoặc không tồn tại.";
+                        updatePriceUI();
+                    }
+                })
+                .catch(err => {
+                    console.error("Lỗi kiểm tra coupon:", err);
+                    Swal.fire('Lỗi', 'Không thể kết nối máy chủ để kiểm tra mã!', 'error');
+                });
+            });
+
+            // Tiến hành lưu đơn hàng
+            document.getElementById("btnSubmitOrder").addEventListener("click", function() {
+                const name = document.getElementById("shipName").value.trim();
+                const phone = document.getElementById("shipPhone").value.trim();
+                const address = document.getElementById("shipAddress").value.trim();
+                const paymentMethod = document.querySelector('input[name="payMethod"]:checked').value;
+
+                if (!name || !phone || !address) {
+                    Swal.fire('Thiếu thông tin', 'Vui lòng điền tên, số điện thoại và địa chỉ nhận hàng nhé!', 'warning');
+                    return;
+                }
+
+                const orderData = {
+                    username: currentUser.username,
+                    items: cart,
+                    totalAmount: finalTotal,
+                    discountCode: appliedCode,
+                    paymentMethod: paymentMethod,
+                    orderCode: orderCode,
+                    shippingInfo: { fullName: name, phone, address }
+                };
+
+                fetch('http://localhost:5000/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.orderId) currentOrderId = data.orderId;
+
+                    if (paymentMethod === 'COD') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Đặt hàng thành công!',
+                            text: 'Đơn hàng COD đã ghi nhận. Shop sẽ giao tới địa chỉ của bạn sớm nhất!',
+                            confirmButtonColor: '#212529'
+                        }).then(() => {
+                            clearCartAndRedirect();
+                        });
+                    } else {
+                        document.getElementById("shipName").disabled = true;
+                        document.getElementById("shipPhone").disabled = true;
+                        document.getElementById("shipAddress").disabled = true;
+                        document.getElementById("btnSubmitOrder").disabled = true;
+                        Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất chuyển khoản!', 'info');
+                    }
+                });
+            });
+
+            document.getElementById("btnConfirmPayment").addEventListener("click", function() {
+                if (!currentOrderId) {
+                    Swal.fire('Thông báo', 'Vui lòng nhập thông tin nhận hàng và bấm nút Hoàn tất đặt hàng trước!', 'warning');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Đang xác thực',
+                    text: 'Hệ thống đang kiểm tra số dư tài khoản...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                setTimeout(() => {
+                    fetch(`http://localhost:5000/api/orders/${currentOrderId}/pay`, { method: 'PUT' })
+                    .then(res => res.json())
+                    .then(data => {
+                        clearInterval(countdownInterval);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thanh toán thành công!',
+                            text: 'Mangic Shop đã nhận được tiền đơn hàng của bạn.',
+                            confirmButtonColor: '#198754'
+                        }).then(() => {
+                            clearCartAndRedirect();
+                        });
+                    });
+                }, 1500);
+            });
+
+            let timeRemaining = 900;
+            const timerSpan = document.getElementById("timer");
+            const countdownInterval = setInterval(() => {
+                let mins = Math.floor(timeRemaining / 60);
+                let secs = timeRemaining % 60;
+                timerSpan.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    Swal.fire('Hết giờ', 'Đơn hàng quá hạn đã tự động hủy.', 'error').then(() => {
+                        window.location.href = "index.html";
+                    });
+                }
+                timeRemaining--;
+            }, 1000);
+
+            document.getElementById("btnCancelOrder").addEventListener("click", function() {
+                Swal.fire({
+                    title: 'Hủy bỏ thanh toán?',
+                    text: 'Bạn muốn quay lại trang chủ mua sắm tiếp?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#6c757d',
+                    cancelButtonColor: '#212529',
+                    confirmButtonText: 'Quay lại trang chủ',
+                    cancelButtonText: 'Ở lại mua tiếp'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        clearInterval(countdownInterval);
+                        window.location.href = "index.html";
+                    }
+                });
+            });
+
+            // ĐÃ SỬA: Hàm chốt đơn tự động khấu trừ giới hạn lượt dùng Coupon trên MongoDB
+            function clearCartAndRedirect() {
+                if (appliedCode) {
+                    fetch('http://localhost:5000/api/admin/coupons/use', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: appliedCode })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log("Đã khấu trừ 1 lượt dùng thành công cho mã:", appliedCode);
+                        executeClearCart();
+                    })
+                    .catch(err => {
+                        console.error("Lỗi cập nhật số lượt dùng coupon:", err);
+                        executeClearCart(); 
+                    });
+                } else {
+                    executeClearCart();
+                }
+            }
+
+            function executeClearCart() {
+                cart = [];
+                localStorage.setItem(cartKey, JSON.stringify(cart));
+                window.location.href = "index.html";
+            }
+        });
+    </script>
+</body>
+</html>

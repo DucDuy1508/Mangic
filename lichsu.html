@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Sử Mua Hàng - Mangic Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
+    <style>
+        .order-card { transition: all 0.2s; border: 1px solid #e0e0e0; }
+        .order-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-5">
+        <div class="container px-4">
+            <a class="navbar-brand fw-bold fs-4" href="index.html"><i class="ti ti-shopping-cart text-warning me-2"></i>MANGIC SHOP</a>
+            <div class="d-flex align-items-center">
+                <span id="txtUserWelcome" class="text-light me-3 small fw-semibold"></span>
+                <a href="index.html" class="btn btn-sm btn-outline-light"><i class="ti ti-arrow-left me-1"></i> Tiếp tục mua sắm</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-3" style="max-width: 900px;">
+        <div id="membershipCardContainer"></div>
+    </div>
+
+    <div class="container my-4" style="max-width: 900px;">
+        <div class="d-flex align-items-center mb-4">
+            <h2 class="fw-bold text-dark m-0"><i class="ti ti-time text-secondary me-2"></i>LỊCH SỬ ĐƠN HÀNG VÀ TRẠNG THÁI</h2>
+        </div>
+
+        <div id="orderHistoryContainer" class="d-flex flex-column gap-4">
+            <div class="text-center py-5" id="loaderSpinner">
+                <div class="spinner-border text-dark" role="status"></div>
+                <p class="text-muted mt-2">Đang tải lịch sử mua hàng của bạn...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Kiểm tra quyền đăng nhập tài khoản khách hàng
+            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            if (!currentUser) {
+                Swal.fire('Thông báo', 'Vui lòng đăng nhập để xem lịch sử mua hàng!', 'warning').then(() => {
+                    window.location.href = "dangnhap.html";
+                });
+                return;
+            }
+
+            // Đổ tên chào mừng khách hàng lên thanh điều hướng navbar
+            document.getElementById("txtUserWelcome").innerText = `Xin chào, ${currentUser.fullName || currentUser.username}`;
+
+            // Kích hoạt gọi đồng thời hai luồng tải dữ liệu độc lập
+            loadMembershipCard();
+            loadOrderHistory();
+
+            // 2. HÀM XỬ LÝ BIỂU DIỄN THẺ VIP THÀNH VIÊN ĐÃ ĐƯỢC FIX GIAO DIỆN KHÔNG RỐI MẮT
+            function loadMembershipCard() {
+                fetch('http://localhost:5000/api/admin/customer-stats')
+                .then(res => res.json())
+                .then(stats => {
+                    const myStat = stats.find(stat => stat._id === currentUser.username);
+                    const totalSpent = myStat ? myStat.totalSpent : 0;
+
+                    let tierName = "ĐỒNG 🥉";
+                    let nextTierText = "";
+                    let bgCard = "linear-gradient(135deg, #7f8c8d, #95a5a6)"; // Mặc định Đồng mờ tối giản
+
+                    if (totalSpent >= 3000000) {
+                        tierName = "KIM CƯƠNG 💎";
+                        nextTierText = `<span class="text-warning fw-bold"><i class="ti ti-gift me-1"></i> Chúc mừng tối cao!</span> Bạn đã đạt cấp độ thành viên cao nhất.`;
+                        bgCard = "linear-gradient(135deg, #4A00E0, #8E2DE2)"; // Tím hoàng gia
+                    } else if (totalSpent >= 1500000) {
+                        tierName = "VÀNG 🥇";
+                        const sotiencan = (3000000 - totalSpent).toLocaleString('vi-VN');
+                        nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong class="text-info">KIM CƯƠNG 💎</strong>`;
+                        bgCard = "linear-gradient(135deg, #f1c40f, #f39c12)"; // Vàng rực rỡ
+                    } else if (totalSpent >= 500000) {
+                        tierName = "BẠC 🥈";
+                        const sotiencan = (1500000 - totalSpent).toLocaleString('vi-VN');
+                        nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong class="text-warning">VÀNG 🥇</strong>`;
+                        bgCard = "linear-gradient(135deg, #34495e, #2c3e50)"; // Bạc Platinum sang trọng
+                    } else {
+                        tierName = "ĐỒNG 🥉";
+                        const sotiencan = (500000 - totalSpent).toLocaleString('vi-VN');
+                        // ĐÃ FIX: Không dùng badge lồng text nhỏ nữa, ép màu chuỗi text sáng rực trên nền tối
+                        nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong style="color: #00f0ff; font-weight: bold;">BẠC 🥈</strong>`;
+                        bgCard = "linear-gradient(135deg, #5D5D5D, #3A3A3A)"; // Đổi hẳn sang màu xám đen mượt mà sắc nét
+                    }
+
+                    document.getElementById("membershipCardContainer").innerHTML = `
+                        <div class="card text-white border-0 shadow-sm p-4 rounded-4 mb-4" style="background: ${bgCard}; position: relative; overflow: hidden;">
+                            <div style="position: absolute; right: -20px; bottom: -30px; font-size: 150px; opacity: 0.08; pointer-events: none;">
+                                <i class="ti ti-crown"></i>
+                            </div>
+                            
+                            <div class="row align-items-center position-relative" style="z-index: 2;">
+                                <div class="col-sm-7">
+                                    <span class="text-uppercase small fw-bold text-white-50 d-block tracking-wider" style="letter-spacing: 1.5px; font-size: 11px;">
+                                        <i class="ti ti-crown me-1"></i> MANGIC SHOP - MEMBERSHIP CARD
+                                    </span>
+                                    <h2 class="fw-bold mt-2 mb-1" style="letter-spacing: -0.5px;">${currentUser.fullName || currentUser.username}</h2>
+                                    <div class="mt-3 text-white-50 small bg-black bg-opacity-25 py-2 px-3 rounded-3 d-inline-block border border-white border-opacity-10">
+                                        ${nextTierText}
+                                    </div>
+                                </div>
+                                <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+                                    <span class="small d-block text-white-50 fw-semibold">HẠNG THÀNH VIÊN</span>
+                                    <h1 class="m-0 text-white" style="font-weight: 900; font-size: 2.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.4);">${tierName}</h1>
+                                    <span class="badge bg-white text-dark mt-2 px-3 py-2 fw-bold shadow-sm" style="font-size: 13px;">
+                                        <i class="ti ti-wallet me-1 text-secondary"></i> Đã chi tiêu: ${totalSpent.toLocaleString('vi-VN')} đ
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(err => console.error("Lỗi tải thông tin thành viên VIP:", err));
+            }
+
+            // 3. HÀM TẢI LỊCH SỬ ĐƠN HÀNG CHI TIẾT
+            function loadOrderHistory() {
+                fetch(`http://localhost:5000/api/orders/history/${currentUser.username}`)
+                .then(res => res.json())
+                .then(orders => {
+                    const container = document.getElementById("orderHistoryContainer");
+                    container.innerHTML = ""; 
+
+                    if (orders.length === 0) {
+                        container.innerHTML = `
+                            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
+                                <i class="ti ti-package text-muted mb-3" style="font-size: 50px;"></i>
+                                <h4 class="fw-bold text-secondary">Bạn chưa có đơn hàng nào!</h4>
+                                <p class="text-muted">Hãy quay lại trang chủ để chọn cho mình những bộ truyện ưng ý nhất nhé.</p>
+                                <a href="index.html" class="btn btn-dark fw-bold px-4 py-2 mt-2 mx-auto">MUA SẮM NGAY</a>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    orders.forEach(order => {
+                        let finalPaymentStatus = order.paymentStatus; 
+                        if (order.orderStatus === 'Hủy đơn') {
+                            finalPaymentStatus = 'Thất bại';
+                        } else if (order.paymentMethod === 'COD') {
+                            if (order.orderStatus === 'Giao hàng thành công') {
+                                finalPaymentStatus = 'Đã thanh toán';
+                            } else {
+                                finalPaymentStatus = 'Chờ thanh toán';
+                            }
+                        } else if (order.paymentMethod === 'QR') {
+                            finalPaymentStatus = 'Đã thanh toán';
+                        }
+
+                        let oStatusBadge = "bg-secondary";
+                        if (order.orderStatus === "Đang giao") oStatusBadge = "bg-warning text-dark";
+                        if (order.orderStatus === "Giao hàng thành công") oStatusBadge = "bg-success";
+                        if (order.orderStatus === "Hủy đơn") oStatusBadge = "bg-danger";
+
+                        let pStatusBadge = "bg-danger";
+                        if (finalPaymentStatus === "Đã thanh toán") pStatusBadge = "bg-success";
+                        if (finalPaymentStatus === "Thất bại") pStatusBadge = "bg-dark";
+
+                        let itemsHtml = order.items.map(item => `
+                            <div class="d-flex justify-content-between align-items-center mb-2 small pb-1 border-bottom border-light">
+                                <span><i class="ti ti-book text-muted me-2"></i>${item.name} <strong class="text-secondary">x${item.quantity}</strong></span>
+                                <span class="fw-semibold text-dark">${(item.price * item.quantity).toLocaleString('vi-VN')} đ</span>
+                            </div>
+                        `).join('');
+
+                        const orderDate = new Date(order.createdAt).toLocaleString('vi-VN', {
+                            hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+                        });
+
+                        const orderCard = `
+                            <div class="card order-card border-0 shadow-sm bg-white p-4 rounded-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-3 gap-2">
+                                    <div>
+                                        <span class="text-muted small">Mã đơn hàng:</span>
+                                        <span class="fw-bold text-dark fs-5 ms-1">${order.orderCode}</span>
+                                        <div class="text-muted mt-1" style="font-size: 12px;"><i class="ti ti-calendar me-1"></i>Thời gian: ${orderDate}</div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <span class="badge ${oStatusBadge} px-3 py-2 fw-bold" style="font-size: 12px;"><i class="ti ti-truck me-1"></i>${order.orderStatus || 'Chờ xử lý'}</span>
+                                        <span class="badge ${pStatusBadge} px-3 py-2 fw-bold" style="font-size: 12px;"><i class="ti ti-wallet me-1"></i>${finalPaymentStatus}</span>
+                                    </div>
+                                </div>
+
+                                <div class="row g-4">
+                                    <div class="col-md-7 border-end">
+                                        <span class="text-muted small fw-bold mb-2 d-block">DANH SÁCH TRUYỆN ĐÃ CHỌN</span>
+                                        <div style="max-height: 150px; overflow-y: auto;" class="pe-2">
+                                            ${itemsHtml}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5" style="font-size: 13px;">
+                                        <span class="text-muted small fw-bold mb-2 d-block">ĐỊA CHỈ NHẬN HÀNG</span>
+                                        <div class="fw-bold text-dark"><i class="ti ti-user me-1 text-muted"></i>${order.shippingInfo?.fullName || 'N/A'}</div>
+                                        <div class="text-secondary mt-1"><i class="ti ti-mobile me-1 text-muted"></i>SĐT: ${order.shippingInfo?.phone || 'N/A'}</div>
+                                        <div class="text-secondary mt-1 text-truncate" style="max-width: 100%;" title="${order.shippingInfo?.address}"><i class="ti ti-location-pin me-1 text-muted"></i>ĐC: ${order.shippingInfo?.address || 'N/A'}</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-3 bg-light p-2 rounded">
+                                    <span class="small text-muted">Hình thức: <strong class="text-dark">${order.paymentMethod === 'QR' ? 'Chuyển khoản ngân hàng (QR)' : 'Thanh toán COD khi nhận hàng'}</strong></span>
+                                    <div>
+                                        <span class="text-muted small">Tổng số tiền:</span>
+                                        <span class="fw-bold text-danger fs-5 ms-1">${order.totalAmount.toLocaleString('vi-VN')} đ</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML += orderCard;
+                    });
+                })
+                .catch(err => {
+                    console.error("Lỗi:", err);
+                    document.getElementById("orderHistoryContainer").innerHTML = `<div class="alert alert-danger text-center">Gặp sự cố kết nối, không thể bốc dữ liệu lịch sử đơn!</div>`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

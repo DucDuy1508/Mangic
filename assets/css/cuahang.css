@@ -1,0 +1,22 @@
+/* Trang Cửa hàng */
+.filter-wrapper {
+    position: sticky;
+    top: 100px; /* Thanh lọc sẽ đứng yên khi cuộn trang */
+    border: 1px solid #eee;
+}
+
+.filter-wrapper h5 {
+    font-size: 18px;
+    font-weight: 700;
+    border-left: 4px solid var(--hover-color);
+    padding-left: 10px;
+}
+
+.form-check-input:checked {
+    background-color: var(--hover-color);
+    border-color: var(--hover-color);
+}
+.product-name {
+    text-align: center;
+}
+/* Tận dụng lại class .ratio-custom và .product-card tui đã hướng dẫn nãy */

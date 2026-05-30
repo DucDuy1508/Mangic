@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giỏ Hàng Của Bạn - Mangic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-white bg-white shadow-sm mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-dark fs-4" href="index.html">MANGIC SHOP</a>
+            <a href="index.html" class="btn btn-sm btn-outline-dark fw-semibold">
+                <i class="ti ti-arrow-left me-1"></i> Tiếp tục mua sắm
+            </a>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h2 class="fw-bold mb-4"><i class="ti ti-shopping-cart me-2 text-warning"></i>Giỏ Hàng Của Bạn</h2>
+        
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm p-4 bg-white">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45%;">Sản phẩm</th>
+                                    <th style="width: 15%;">Đơn giá</th>
+                                    <th style="width: 15%;" class="text-center">Số lượng</th>
+                                    <th style="width: 15%;">Thành tiền</th>
+                                    <th style="width: 10%;" class="text-center">Xóa</th>
+                                </tr>
+                            </thead>
+                        </table>
+                        
+                        <div id="cartEmptyMessage" class="text-center py-5 d-none">
+                            <i class="ti ti-shopping-cart-full fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted fw-semibold">Giỏ hàng của bạn hiện tại đang trống.</p>
+                        </div>
+                        
+                        <table class="table align-middle">
+                            <tbody id="cartTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm p-4 bg-white">
+                    <h5 class="fw-bold border-bottom pb-3 mb-3">TÓM TẮT ĐƠN HÀNG</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Tạm tính:</span>
+                        <span id="subTotal" class="fw-semibold">0 đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Phí vận chuyển:</span>
+                        <span class="text-success fw-semibold">Miễn phí</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="fw-bold fs-5">Tổng tiền:</span>
+                        <span id="cartTotal" class="fw-bold fs-4 text-danger">0 đ</span>
+                    </div>
+                    <button id="btnCheckout" class="btn btn-dark w-100 fw-bold py-3 fs-5">
+                        TIẾN HÀNH THANH TOÁN <i class="ti ti-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            if (!currentUser) {
+                window.location.href = "dangnhap.html";
+                return;
+            }
+
+            const cartKey = "cart_" + currentUser.username;
+            let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+
+            const tbody = document.getElementById("cartTableBody");
+            const emptyMsg = document.getElementById("cartEmptyMessage");
+            const cartTotalSpan = document.getElementById("cartTotal");
+            const subTotalSpan = document.getElementById("subTotal");
+
+            function renderCart() {
+                if (cart.length === 0) {
+                    tbody.innerHTML = "";
+                    emptyMsg.classList.remove("d-none");
+                    cartTotalSpan.innerText = "0 đ";
+                    subTotalSpan.innerText = "0 đ";
+                    return;
+                }
+
+                emptyMsg.classList.add("d-none");
+                tbody.innerHTML = "";
+                let totalAmount = 0;
+
+                cart.forEach((item, index) => {
+                    let itemTotal = item.price * item.quantity;
+                    totalAmount += itemTotal;
+
+                    const row = `
+                        <tr>
+                            <td style="width: 45%;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="${item.image}" alt="${item.name}" class="rounded" style="width: 50px; height: 70px; object-fit: cover;">
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">${item.name}</h6>
+                                        <small class="text-muted">Mã: ${item.id}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="width: 15%;" class="fw-semibold">${item.price.toLocaleString('vi-VN')} đ</td>
+                            <td style="width: 15%;">
+                                <div class="d-flex justify-content-center align-items-center gap-2">
+                                    <button class="btn btn-sm btn-outline-secondary px-2 btn-quantity" data-index="${index}" data-action="decrease">-</button>
+                                    <span class="fw-bold px-1">${item.quantity}</span>
+                                    <button class="btn btn-sm btn-outline-secondary px-2 btn-quantity" data-index="${index}" data-action="increase">+</button>
+                                </div>
+                            </td>
+                            <td style="width: 15%;" class="fw-bold text-dark">${itemTotal.toLocaleString('vi-VN')} đ</td>
+                            <td style="width: 10%;" class="text-center">
+                                <button class="btn btn-sm btn-link text-danger btn-delete-item" data-index="${index}">
+                                    <i class="ti ti-trash fs-5"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+
+                cartTotalSpan.innerText = totalAmount.toLocaleString('vi-VN') + " đ";
+                subTotalSpan.innerText = totalAmount.toLocaleString('vi-VN') + " đ";
+
+                addCartEvents();
+            }
+
+            function addCartEvents() {
+                document.querySelectorAll(".btn-quantity").forEach(btn => {
+                    btn.addEventListener("click", function() {
+                        const index = this.getAttribute("data-index");
+                        const action = this.getAttribute("data-action");
+
+                        if (action === "increase") {
+                            cart[index].quantity += 1;
+                        } else if (action === "decrease") {
+                            if (cart[index].quantity > 1) {
+                                cart[index].quantity -= 1;
+                            } else {
+                                return;
+                            }
+                        }
+
+                        localStorage.setItem(cartKey, JSON.stringify(cart));
+                        renderCart();
+                    });
+                });
+
+                document.querySelectorAll(".btn-delete-item").forEach(btn => {
+                    btn.addEventListener("click", function() {
+                        const index = this.getAttribute("data-index");
+                        
+                        Swal.fire({
+                            title: 'Xóa sản phẩm khỏi giỏ hàng?',
+                            text: `Bạn có chắc chắn muốn bỏ sản phẩm "${cart[index].name}" ra khỏi giỏ hàng không?`,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#212529',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'Xác nhận xóa',
+                            cancelButtonText: 'Hủy bỏ'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                cart.splice(index, 1);
+                                localStorage.setItem(cartKey, JSON.stringify(cart));
+                                renderCart();
+                            }
+                        });
+                    });
+                });
+            }
+
+            // XỬ LÝ SỰ KIỆN BẤM NÚT TIẾN HÀNH THANH TOÁN CHUẨN
+            const btnCheckout = document.getElementById("btnCheckout");
+            if (btnCheckout) {
+                btnCheckout.addEventListener("click", function() {
+                    if (cart.length === 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Thông báo',
+                            text: 'Giỏ hàng của bạn hiện đang trống. Vui lòng chọn sản phẩm trước khi thanh toán.',
+                            confirmButtonColor: '#212529'
+                        });
+                        return;
+                    }
+
+                    // Đẩy thẳng sang trang thanh toán QR động của mình
+                    window.location.href = "thanhtoan.html";
+                });
+            }
+
+            renderCart();
+        });
+    </script>
+</body>
+</html>
