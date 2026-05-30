@@ -837,3 +837,58 @@
     background-color: #333;
     transform: translateY(-2px);
 }
+/* --- 1. DÀNH CHO MÁY TÍNH BẢNG (TABLET) --- */
+@media screen and (max-width: 1024px) {
+    /* Ép các khung chứa (container) không được tràn màn hình */
+    .container, .wrapper, .main-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+    
+    /* Nếu các hàng (row) đang chia cột cố định bằng px, ép chúng tự xuống hàng */
+    .row, .grid, .flex-container {
+        flex-wrap: wrap !important;
+    }
+
+    /* Ép các thẻ chia cột (như danh sách truyện) rộng ra chiếm 50% màn hình (2 cột/hàng) */
+    .col-3, .col-4, .product-item {
+        width: 50% !important;
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+}
+
+/* --- 2. DÀNH CHO ĐIỆN THOẠI (MOBILE) --- */
+@media screen and (max-width: 768px) {
+    /* Ép các chữ tiêu đề to đùng thu nhỏ lại cho vừa màn hình điện thoại */
+    h1 { font-size: 24px !important; }
+    h2 { font-size: 20px !important; }
+    h3 { font-size: 18px !important; }
+    body { font-size: 14px !important; }
+
+    /* Điện thoại màn hình rất hẹp, ép các cột hiển thị thành 1 hàng dọc duy nhất */
+    .col-3, .col-4, .col-6, .product-item, .sidebar, .main-panel {
+        width: 100% !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 15px !important;
+    }
+
+    /* Ép tất cả hình ảnh (hình truyện, hình banner) không được bóp méo hoặc tràn viền */
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Nếu Menu Header bị vỡ, ẩn bớt các mục không quan trọng hoặc cho nó dàn hàng dọc */
+    nav, .navbar, .menu {
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+    nav a, .menu-item {
+        display: block !important;
+        padding: 10px 0 !important;
+    }
+}
