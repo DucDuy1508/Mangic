@@ -43,6 +43,11 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG: Chạy máy nhà dùng localhost, lên Vercel tự trỏ sang Render
+            const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+                ? "http://localhost:5000"
+                : "https://mangic.onrender.com";
+
             // 1. Kiểm tra quyền đăng nhập tài khoản khách hàng
             const currentUser = JSON.parse(localStorage.getItem("currentUser"));
             if (!currentUser) {
@@ -55,13 +60,14 @@
             // Đổ tên chào mừng khách hàng lên thanh điều hướng navbar
             document.getElementById("txtUserWelcome").innerText = `Xin chào, ${currentUser.fullName || currentUser.username}`;
 
-            // Kích hoạt gọi đồng thời hai luồng tải dữ liệu độc lập
+            // Kích hoạt gọi đồng thời hai luồng tải dữ liệu độc lập qua API đám mây
             loadMembershipCard();
             loadOrderHistory();
 
-            // 2. HÀM XỬ LÝ BIỂU DIỄN THẺ VIP THÀNH VIÊN ĐÃ ĐƯỢC FIX GIAO DIỆN KHÔNG RỐI MẮT
+            // 2. HÀM XỬ LÝ BIỂU DIỄN THẺ VIP THÀNH VIÊN
             function loadMembershipCard() {
-                fetch('http://localhost:5000/api/admin/customer-stats')
+                // ĐÃ SỬA: Thay thế link sang biến API_URL động
+                fetch(`${API_URL}/api/admin/customer-stats`)
                 .then(res => res.json())
                 .then(stats => {
                     const myStat = stats.find(stat => stat._id === currentUser.username);
@@ -69,28 +75,27 @@
 
                     let tierName = "ĐỒNG 🥉";
                     let nextTierText = "";
-                    let bgCard = "linear-gradient(135deg, #7f8c8d, #95a5a6)"; // Mặc định Đồng mờ tối giản
+                    let bgCard = "linear-gradient(135deg, #7f8c8d, #95a5a6)"; 
 
                     if (totalSpent >= 3000000) {
                         tierName = "KIM CƯƠNG 💎";
                         nextTierText = `<span class="text-warning fw-bold"><i class="ti ti-gift me-1"></i> Chúc mừng tối cao!</span> Bạn đã đạt cấp độ thành viên cao nhất.`;
-                        bgCard = "linear-gradient(135deg, #4A00E0, #8E2DE2)"; // Tím hoàng gia
+                        bgCard = "linear-gradient(135deg, #4A00E0, #8E2DE2)"; 
                     } else if (totalSpent >= 1500000) {
                         tierName = "VÀNG 🥇";
                         const sotiencan = (3000000 - totalSpent).toLocaleString('vi-VN');
                         nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong class="text-info">KIM CƯƠNG 💎</strong>`;
-                        bgCard = "linear-gradient(135deg, #f1c40f, #f39c12)"; // Vàng rực rỡ
+                        bgCard = "linear-gradient(135deg, #f1c40f, #f39c12)"; 
                     } else if (totalSpent >= 500000) {
                         tierName = "BẠC 🥈";
                         const sotiencan = (1500000 - totalSpent).toLocaleString('vi-VN');
                         nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong class="text-warning">VÀNG 🥇</strong>`;
-                        bgCard = "linear-gradient(135deg, #34495e, #2c3e50)"; // Bạc Platinum sang trọng
+                        bgCard = "linear-gradient(135deg, #34495e, #2c3e50)"; 
                     } else {
                         tierName = "ĐỒNG 🥉";
                         const sotiencan = (500000 - totalSpent).toLocaleString('vi-VN');
-                        // ĐÃ FIX: Không dùng badge lồng text nhỏ nữa, ép màu chuỗi text sáng rực trên nền tối
                         nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong style="color: #00f0ff; font-weight: bold;">BẠC 🥈</strong>`;
-                        bgCard = "linear-gradient(135deg, #5D5D5D, #3A3A3A)"; // Đổi hẳn sang màu xám đen mượt mà sắc nét
+                        bgCard = "linear-gradient(135deg, #5D5D5D, #3A3A3A)"; 
                     }
 
                     document.getElementById("membershipCardContainer").innerHTML = `
@@ -125,7 +130,8 @@
 
             // 3. HÀM TẢI LỊCH SỬ ĐƠN HÀNG CHI TIẾT
             function loadOrderHistory() {
-                fetch(`http://localhost:5000/api/orders/history/${currentUser.username}`)
+                // ĐÃ SỬA: Thay thế link sang biến API_URL động
+                fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                 .then(res => res.json())
                 .then(orders => {
                     const container = document.getElementById("orderHistoryContainer");
@@ -206,9 +212,9 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-3 bg-light p-2 rounded">
-                                    <span class="small text-muted">Hình thức: <strong class="text-dark">${order.paymentMethod === 'QR' ? 'Chuyển khoản ngân hàng (QR)' : 'Thanh toán COD khi nhận hàng'}</strong></span>
-                                    <div>
+                                <div class="row d-flex justify-content-between align-items-center border-top pt-3 mt-3 bg-light p-2 rounded mx-0">
+                                    <span class="col-sm-8 small text-muted px-0">Hình thức: <strong class="text-dark">${order.paymentMethod === 'QR' ? 'Chuyển khoản ngân hàng (QR)' : 'Thanh toán COD khi nhận hàng'}</strong></span>
+                                    <div class="col-sm-4 text-sm-end px-0 mt-2 mt-sm-0">
                                         <span class="text-muted small">Tổng số tiền:</span>
                                         <span class="fw-bold text-danger fs-5 ms-1">${order.totalAmount.toLocaleString('vi-VN')} đ</span>
                                     </div>

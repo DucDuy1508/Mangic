@@ -41,6 +41,11 @@
     </div>
 
     <script>
+        // TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG: Chạy máy nhà dùng localhost, lên Vercel dùng Render
+        const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+            ? "http://localhost:5000"
+            : "https://mangic.onrender.com";
+
         document.getElementById('registerForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -60,8 +65,8 @@
                 role: "customer" // KHÓA CỨNG: Ép buộc tất cả người đăng ký từ giao diện đều là Customer
             };
 
-            // Gọi API lên Backend cổng 5000 bằng Live Server
-            fetch('http://localhost:5000/api/register', {
+            // ĐÃ SỬA: Thay thế link localhost tĩnh thành biến trỏ sang Render động
+            fetch(`${API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

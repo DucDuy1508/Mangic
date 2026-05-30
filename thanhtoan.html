@@ -144,6 +144,11 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
+            // TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG: Chạy máy nhà dùng localhost, lên Vercel tự động tìm đến Render
+            const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+                ? "http://localhost:5000"
+                : "https://mangic.onrender.com";
+
             const currentUser = JSON.parse(localStorage.getItem("currentUser"));
             if (!currentUser) { window.location.href = "dangnhap.html"; return; }
 
@@ -163,8 +168,8 @@
             const orderCode = "MGC" + Math.floor(100000 + Math.random() * 900000);
             document.getElementById("txtOrderCode").innerText = orderCode;
 
-            // Tự động kiểm tra chi tiêu để tính hạng thành viên và giảm giá thêm
-            fetch('http://localhost:5000/api/admin/customer-stats')
+            // Tự động kiểm tra chi tiêu để tính hạng thành viên và giảm giá thêm qua API_URL động
+            fetch(`${API_URL}/api/admin/customer-stats`)
             .then(res => res.json())
             .then(stats => {
                 const myStat = stats.find(stat => stat._id === currentUser.username);
@@ -200,10 +205,8 @@
             });
 
             function updatePriceUI() {
-                // Tính số tiền giảm giá dựa trên Hạng thành viên
                 memberDiscountAmount = Math.round(originalTotal * (membershipDiscountPercent / 100));
                 
-                // Trừ đồng thời cả tiền giảm Coupon và hạng VIP
                 finalTotal = originalTotal - discountAmount - memberDiscountAmount;
                 if (finalTotal < 0) finalTotal = 0;
 
@@ -219,7 +222,7 @@
                 document.getElementById("qrcodeImg").src = qrUrl;
             }
 
-            // Áp dụng mã giảm giá bốc từ database MongoDB
+            // Áp dụng mã giảm giá bốc từ database MongoDB qua API_URL động
             document.getElementById("btnApplyCoupon").addEventListener("click", function() {
                 const code = document.getElementById("couponInput").value.trim().toUpperCase();
                 const msg = document.getElementById("couponMessage");
@@ -230,7 +233,7 @@
                     return;
                 }
 
-                fetch('http://localhost:5000/api/admin/coupons')
+                fetch(`${API_URL}/api/admin/coupons`)
                 .then(res => res.json())
                 .then(coupons => {
                     const matchedCoupon = coupons.find(cp => cp.code === code);
@@ -278,7 +281,7 @@
                 });
             });
 
-            // Tiến hành lưu đơn hàng
+            // Tiến hành lưu đơn hàng qua API_URL động
             document.getElementById("btnSubmitOrder").addEventListener("click", function() {
                 const name = document.getElementById("shipName").value.trim();
                 const phone = document.getElementById("shipPhone").value.trim();
@@ -300,7 +303,7 @@
                     shippingInfo: { fullName: name, phone, address }
                 };
 
-                fetch('http://localhost:5000/api/orders', {
+                fetch(`${API_URL}/api/orders`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(orderData)
@@ -328,6 +331,7 @@
                 });
             });
 
+            // Xác nhận thanh toán trực tiếp lên Render qua API_URL động
             document.getElementById("btnConfirmPayment").addEventListener("click", function() {
                 if (!currentOrderId) {
                     Swal.fire('Thông báo', 'Vui lòng nhập thông tin nhận hàng và bấm nút Hoàn tất đặt hàng trước!', 'warning');
@@ -342,7 +346,7 @@
                 });
 
                 setTimeout(() => {
-                    fetch(`http://localhost:5000/api/orders/${currentOrderId}/pay`, { method: 'PUT' })
+                    fetch(`${API_URL}/api/orders/${currentOrderId}/pay`, { method: 'PUT' })
                     .then(res => res.json())
                     .then(data => {
                         clearInterval(countdownInterval);
@@ -391,10 +395,10 @@
                 });
             });
 
-            // ĐÃ SỬA: Hàm chốt đơn tự động khấu trừ giới hạn lượt dùng Coupon trên MongoDB
+            // Hàm chốt đơn tự động khấu trừ lượt dùng Coupon trên MongoDB Atlas qua API_URL động
             function clearCartAndRedirect() {
                 if (appliedCode) {
-                    fetch('http://localhost:5000/api/admin/coupons/use', {
+                    fetch(`${API_URL}/api/admin/coupons/use`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ code: appliedCode })

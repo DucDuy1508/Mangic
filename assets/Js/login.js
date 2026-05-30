@@ -1,3 +1,7 @@
+const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "https://mangic.onrender.com";
+
 document.getElementById('loginForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -14,8 +18,8 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
         }
     });
 
-    // Gửi request lên Backend
-    fetch('http://localhost:5000/api/login', {
+    // ĐÃ SỬA: Thay thế link localhost tĩnh thành biến trỏ sang Render động
+    fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

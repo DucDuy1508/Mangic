@@ -1,3 +1,6 @@
+const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "https://mangic.onrender.com";
 // ==========================================
 // 1. XỬ LÝ THANH ĐIỀU HƯỚNG (NAVBAR ACTIVE)
 // ==========================================

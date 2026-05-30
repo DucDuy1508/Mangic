@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG: Chạy máy nhà dùng localhost, lên Vercel dùng Render
+    const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+        ? "http://localhost:5000"
+        : "https://mangic.onrender.com";
+
     // 1. Bảo mật: Kiểm tra quyền Admin
     const currentUser = JSON.parse(localStorage.getItem("currentUser"));
 
@@ -20,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function() {
         adminNameSpan.innerText = `Quản trị: ${currentUser.fullName}`;
     }
 
-    // Tự động tải dữ liệu các bảng khi vừa mở trang (ĐÃ BỎ hàm chọn sản phẩm)
+    // Tự động tải dữ liệu các bảng khi vừa mở trang
     loadOrdersData();
     loadCustomerStats();
     loadUsers();
@@ -28,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 2. HÀM CHÍNH: ĐỌC ĐƠN HÀNG & TỰ ĐỘNG HÓA TRẠNG THÁI THANH TOÁN
     function loadOrdersData() {
-        fetch('http://localhost:5000/api/admin/orders') 
+        fetch(`${API_URL}/api/admin/orders`) 
         .then(res => res.json())
         .then(orders => {
             const tbody = document.getElementById("tblOrdersBody");
@@ -36,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function() {
             tbody.innerHTML = "";
             
             let totalRevenue = 0;
-            let validOrderCount = 0; // Đếm số đơn hàng không bị hủy
+            let validOrderCount = 0; 
 
             if(orders.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td></tr>`;
@@ -46,7 +51,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             orders.forEach(order => {
-                // TỰ ĐỘNG HÓA LOGIC CỘT THANH TOÁN
                 let finalPaymentStatus = order.paymentStatus; 
 
                 if (order.orderStatus === 'Hủy đơn') {
@@ -61,12 +65,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     finalPaymentStatus = 'Đã thanh toán';
                 }
 
-                // TỔNG SỐ ĐƠN HÀNG: Loại bỏ các đơn bị Hủy
                 if (order.orderStatus !== 'Hủy đơn') {
                     validOrderCount++;
                 }
 
-                // TỔNG DOANH THU: Chỉ cộng dồn đơn Đã thanh toán thực tế
                 if(finalPaymentStatus === 'Đã thanh toán') {
                     totalRevenue += order.totalAmount;
                 }
@@ -75,13 +77,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     <div style="font-size: 12px;">• ${item.name} <strong>(x${item.quantity})</strong></div>
                 `).join('');
 
-                // Gán màu sắc Badge cho Trạng thái đơn hàng
                 let oStatusClass = "bg-secondary";
                 if (order.orderStatus === "Đang giao") oStatusClass = "bg-warning text-dark";
                 if (order.orderStatus === "Giao hàng thành công") oStatusClass = "bg-success";
                 if (order.orderStatus === "Hủy đơn") oStatusClass = "bg-danger";
 
-                // Gán màu sắc Badge cho Trạng thái thanh toán
                 let pStatusClass = "bg-danger";
                 if (finalPaymentStatus === "Đã thanh toán") pStatusClass = "bg-success";
                 if (finalPaymentStatus === "Thất bại") pStatusClass = "bg-dark text-white";
@@ -116,7 +116,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 tbody.innerHTML += row;
             });
 
-            // Đổ con số thống kê Dashboard sau khi đã tính toán tự động
             document.getElementById("dashRevenue").innerText = totalRevenue.toLocaleString('vi-VN') + " đ";
             document.getElementById("dashOrdersCount").innerText = validOrderCount + " đơn";
         })
@@ -133,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
             payload.paymentStatus = 'Thất bại';
         }
 
-        fetch(`http://localhost:5000/api/admin/orders/${id}/update-status`, {
+        fetch(`${API_URL}/api/admin/orders/${id}/update-status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -147,9 +146,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // 4. TAB THỐNG KÊ LỊCH SỬ KHÁCH HÀNG
-    // --- [SỬA LẠI HÀM 4 TRONG FILE admin.js ĐỂ THỂ HIỆN BẬC THÀNH VIÊN VIP] ---
     function loadCustomerStats() {
-        fetch('http://localhost:5000/api/admin/customer-stats')
+        fetch(`${API_URL}/api/admin/customer-stats`)
         .then(res => res.json())
         .then(stats => {
             const tbody = document.getElementById("tblCustomersBody");
@@ -161,7 +159,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 const totalSpent = stat.totalSpent || 0;
                 let tierBadge = "";
 
-                // Thuật toán tự động quét chi tiêu để gắn danh hiệu VIP
                 if (totalSpent >= 3000000) {
                     tierBadge = `<span class="badge bg-dark text-info border border-info px-2 py-1 fw-bold">KIM CƯƠNG 💎</span>`;
                 } else if (totalSpent >= 1500000) {
@@ -172,7 +169,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     tierBadge = `<span class="badge bg-secondary px-2 py-1 fw-bold">ĐỒNG 🥉</span>`;
                 }
 
-                // Đổ dữ liệu có kèm cột tierBadge vừa tính được vào mảng hàng
                 tbody.innerHTML += `
                     <tr>
                         <td class="fw-bold"><i class="ti ti-user text-muted me-2"></i>${stat._id}</td>
@@ -189,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 5. TAB QUẢN LÝ TÀI KHOẢN NGƯỜI DÙNG
     function loadUsers() {
-        fetch('http://localhost:5000/api/users')
+        fetch(`${API_URL}/api/users`)
             .then(res => res.json())
             .then(users => {
                 const tbody = document.getElementById("tblUsersListBody");
@@ -233,7 +229,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     confirmButtonText: 'Đồng ý xóa'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        fetch(`http://localhost:5000/api/users/${usernameToDelete}`, { method: 'DELETE' })
+                        fetch(`${API_URL}/api/users/${usernameToDelete}`, { method: 'DELETE' })
                         .then(res => res.json())
                         .then(data => {
                             if (data.error) Swal.fire('Thất bại', data.error, 'error');
@@ -250,7 +246,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 6. TAB QUẢN LÝ MÃ GIẢM GIÁ (COUPON)
     function loadCoupons() {
-        fetch('http://localhost:5000/api/admin/coupons')
+        fetch(`${API_URL}/api/admin/coupons`)
             .then(res => res.json())
             .then(coupons => {
                 const tbody = document.getElementById("couponTableBody");
@@ -281,7 +277,6 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     }
 
-    // ĐÃ CẬP NHẬT: Form tạo Coupon tự động gán mảng rỗng để giảm giá toàn sàn
     const couponForm = document.getElementById("couponForm");
     if (couponForm) {
         couponForm.addEventListener("submit", function(e) {
@@ -292,10 +287,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 usageLimit: Number(document.getElementById("cpLimit").value),
                 startDate: document.getElementById("cpStart").value || new Date(),
                 endDate: document.getElementById("cpEnd").value ? new Date(document.getElementById("cpEnd").value) : null,
-                applicableProducts: [] // Mặc định mảng rỗng để áp dụng tự động cho toàn shop
+                applicableProducts: [] 
             };
 
-            fetch('http://localhost:5000/api/admin/coupons', {
+            fetch(`${API_URL}/api/admin/coupons`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(couponData)
@@ -324,7 +319,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     confirmButtonText: 'Xóa ngay'
                 }).then(result => {
                     if (result.isConfirmed) {
-                        fetch(`http://localhost:5000/api/admin/coupons/${id}`, { method: 'DELETE' })
+                        fetch(`${API_URL}/api/admin/coupons/${id}`, { method: 'DELETE' })
                         .then(() => {
                             Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1000, showConfirmButton: false });
                             loadCoupons();
@@ -335,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 7. Xử lý nút Đăng xuất Admin chính chủ
+    // 7. Xử lý nút Đăng xuất Admin
     const btnAdminLogout = document.getElementById("btnLogoutAdmin");
     if (btnAdminLogout) {
         btnAdminLogout.addEventListener("click", function() {
