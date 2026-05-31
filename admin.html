@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
-    <!-- Nhúng thư viện Chart.js để vẽ biểu đồ siêu ngầu -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <title>Mangic Admin - Hệ Thống Điều Hành</title>
     <style>
@@ -17,44 +16,17 @@
         body { background-color: #f4f5f7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
         
         /* Sidebar Mục lục bên trái */
-        #sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
-            position: fixed;
-            top: 0; left: 0;
-            background-color: var(--primary-dark);
-            color: #a2a3b7;
-            z-index: 100;
-            padding-top: 20px;
-        }
+        #sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; top: 0; left: 0; background-color: var(--primary-dark); color: #a2a3b7; z-index: 100; padding-top: 20px; }
         .sidebar-logo { padding: 10px 25px; border-bottom: 1px solid #2b2b40; margin-bottom: 20px; }
         .sidebar-logo h4 { color: white; font-weight: 700; letter-spacing: 1px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu li a {
-            display: flex;
-            align-items: center;
-            padding: 14px 25px;
-            color: #a2a3b7;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 14px 25px; color: #a2a3b7; text-decoration: none; font-weight: 500; transition: all 0.3s; cursor: pointer; }
         .sidebar-menu li a i { margin-right: 12px; font-size: 16px; }
-        .sidebar-menu li a:hover, .sidebar-menu li a.active {
-            color: white;
-            background-color: #1b1b28;
-            border-left: 4px solid var(--accent-color);
-        }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { color: white; background-color: #1b1b28; border-left: 4px solid var(--accent-color); }
         .logout-item { border-top: 1px solid #2b2b40; margin-top: 30px; }
 
         /* Vùng hiển thị bên phải */
-        #main-content {
-            margin-left: var(--sidebar-width);
-            padding: 40px;
-            min-height: 100vh;
-        }
-        
+        #main-content { margin-left: var(--sidebar-width); padding: 40px; min-height: 100vh; }
         .card-stat { border: none; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .table-wrapper, .chart-wrapper { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 30px; }
         .status-badge { width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 6px; }
@@ -66,42 +38,33 @@
 </head>
 <body>
 
-    <!-- ========================================== -->
-    <!-- SIDEBAR - MỤC LỤC BÊN TRÁI                    -->
-    <!-- ========================================== -->
     <div id="sidebar">
         <div class="sidebar-logo">
             <h4>MANGIC ADMIN</h4>
         </div>
         <ul class="sidebar-menu">
             <li><a onclick="switchTab('section-dashboard')" id="btn-section-dashboard" class="active"><i class="ti ti-dashboard"></i>Báo cáo & Tổng quan</a></li>
+            <li><a onclick="switchTab('section-users-manage')" id="btn-section-users-manage"><i class="ti ti-user"></i>Quản lý tài khoản</a></li>
             <li><a onclick="switchTab('section-orders')" id="btn-section-orders"><i class="ti ti-shopping-cart"></i>Quản lý đơn hàng</a></li>
             <li><a onclick="switchTab('section-coupons')" id="btn-section-coupons"><i class="ti ti-ticket"></i>Quản lý Coupon</a></li>
             <li><a onclick="switchTab('section-users')" id="btn-section-users"><i class="ti ti-pulse"></i>Giám sát tài khoản</a></li>
-            
-            <!-- ĐÃ ĐỔI: Nút quay lại thành nút ĐĂNG XUẤT tối cao -->
             <li class="logout-item">
                 <a onclick="handleAdminLogout()" class="text-danger fw-bold"><i class="ti ti-power-off text-danger"></i>Đăng xuất hệ thống</a>
             </li>
         </ul>
     </div>
 
-    <!-- ========================================== -->
-    <!-- MAIN CONTENT - VÙNG HIỂN THỊ ĐỘNG BÊN PHẢI   -->
-    <!-- ========================================== -->
     <div id="main-content">
         
-        <!-- TAB 1: BÁO CÁO & TỔNG QUAN (CÓ BIỂU ĐỒ) -->
         <div id="section-dashboard" class="content-section active">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 class="fw-bold text-dark">Trung Tâm Điều Hành Realtime</h3>
-                    <p class="text-muted small">Hệ thống phân tích kinh doanh trực quan.</p>
+                    <p class="text-muted small">Hệ thống phân tích kinh doanh tổng quan.</p>
                 </div>
-                <button class="btn btn-dark fw-bold btn-sm" onclick="loadDashboardData()"><i class="ti ti-reload me-1"></i> Refresh dữ liệu</button>
+                <button class="btn btn-dark fw-bold btn-sm" onclick="loadDashboardData()"><i class="ti ti-reload me-1"></i> Refresh</button>
             </div>
             
-            <!-- 4 Khối số liệu tổng -->
             <div class="row g-4 mb-4">
                 <div class="col-lg-3 col-md-6">
                     <div class="card-stat p-4 bg-dark shadow">
@@ -149,29 +112,23 @@
                 </div>
             </div>
 
-            <!-- THÊM MỚI: PHÂN VÙNG BIỂU ĐỒ BÁO CÁO ĐỒ THỊ -->
             <div class="row mb-4">
                 <div class="col-lg-8">
                     <div class="chart-wrapper">
                         <h5 class="fw-bold text-dark mb-4"><i class="ti ti-stats-up text-primary me-2"></i>Thống kê tương tác Traffic vs Clicks</h5>
-                        <div style="position: relative; height:280px;">
-                            <canvas id="analyticsChart"></canvas>
-                        </div>
+                        <div style="position: relative; height:280px;"><canvas id="analyticsChart"></canvas></div>
                     </div>
                 </div>
                 <div class="col-lg-4">
                     <div class="chart-wrapper">
-                        <h5 class="fw-bold text-dark mb-4"><i class="ti ti-pie-chart text-success me-2"></i>Tỷ lệ trạng thái tài khoản</h5>
-                        <div style="position: relative; height:280px; display: flex; justify-content: center;">
-                            <canvas id="userPieChart"></canvas>
-                        </div>
+                        <h5 class="fw-bold text-dark mb-4"><i class="ti ti-pie-chart text-success me-2"></i>Tỷ lệ tài khoản On/Off</h5>
+                        <div style="position: relative; height:280px; display: flex; justify-content: center;"><canvas id="userPieChart"></canvas></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Nhật ký hoạt động -->
             <div class="table-wrapper">
-                <h5 class="fw-bold mb-4 text-dark"><i class="ti ti-time me-1 text-primary"></i> Nhật ký hoạt động gần đây</h5>
+                <h5 class="fw-bold mb-4 text-dark"><i class="ti ti-time me-1 text-primary"></i> Nhật ký hoạt động chi tiết ngày gần đây</h5>
                 <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
@@ -179,7 +136,7 @@
                                 <th>Tài khoản</th>
                                 <th>Hành động</th>
                                 <th>Chi tiết tương tác</th>
-                                <th>Thời gian</th>
+                                <th>Thời gian hoạt động</th>
                             </tr>
                         </thead>
                         <tbody id="table-activities"></tbody>
@@ -188,7 +145,27 @@
             </div>
         </div>
 
-        <!-- TAB 2: QUẢN LÝ ĐƠN HÀNG -->
+        <div id="section-users-manage" class="content-section">
+            <h3 class="fw-bold text-dark mb-4">Quản Lý Cơ Sở Dữ Liệu Khách Hàng</h3>
+            <div class="table-wrapper">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tài Khoản / Họ Tên</th>
+                                <th>Đơn Đã Đặt</th>
+                                <th>Đơn Đã Hủy</th>
+                                <th>Tổng Tiền Tích Lũy</th>
+                                <th>Hạng Thành Viên</th>
+                                <th>Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-customers-manage"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="section-orders" class="content-section">
             <h3 class="fw-bold text-dark mb-4">Hệ Thống Đơn Hàng Mua Sắm</h3>
             <div class="table-wrapper">
@@ -196,7 +173,7 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Mã Đơn Hàng</th>
+                                <th>Mã Đơn</th>
                                 <th>Khách Hàng</th>
                                 <th>Tổng Tiền</th>
                                 <th>Thanh Toán</th>
@@ -210,7 +187,6 @@
             </div>
         </div>
 
-        <!-- TAB 3: QUẢN LÝ COUPON -->
         <div id="section-coupons" class="content-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="fw-bold text-dark">Quản Lý Mã Giảm Giá (Coupon)</h3>
@@ -234,7 +210,6 @@
             </div>
         </div>
 
-        <!-- TAB 4: GIÁM SÁT TÀI KHOẢN -->
         <div id="section-users" class="content-section">
             <h3 class="fw-bold text-dark mb-4">Giám Sát Phiên Hoạt Động Của Người Dùng</h3>
             <div class="table-wrapper">
@@ -244,8 +219,8 @@
                             <tr>
                                 <th>Họ Tên / Username</th>
                                 <th>Vai trò</th>
-                                <th>Trạng Thái Online</th>
-                                <th>Thao Tác Hệ Thống</th>
+                                <th>Trạng Thái</th>
+                                <th>Tương Tác Cuối (Đầy đủ ngày giờ)</th>
                             </tr>
                         </thead>
                         <tbody id="table-users-status"></tbody>
@@ -256,9 +231,6 @@
 
     </div>
 
-    <!-- ========================================== -->
-    <!-- MODAL TẠO COUPON ĐÃ SỬA: CÓ SET NGÀY HẠN DÙNG -->
-    <!-- ========================================== -->
     <div class="modal fade" id="addCouponModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -269,7 +241,7 @@
                 <div class="modal-body">
                     <form id="form-create-coupon">
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Mã Code (Ví dụ: MANGIC20)</label>
+                            <label class="form-label fw-bold small">Mã Code</label>
                             <input type="text" id="cp-code" class="form-control" required placeholder="Nhập mã chữ viết hoa...">
                         </div>
                         <div class="mb-3">
@@ -277,22 +249,19 @@
                             <input type="number" id="cp-percent" class="form-control" min="1" max="100" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Tổng số lượt phát hành tối đa</label>
+                            <label class="form-label fw-bold small">Tổng số lượt phát hành</label>
                             <input type="number" id="cp-limit" class="form-control" min="1" required>
                         </div>
-                        
-                        <!-- ĐÃ THÊM: Ô Chọn ngày bắt đầu và ngày hết hạn cực chuẩn -->
                         <div class="row mb-3">
                             <div class="col-6">
-                                <label class="form-label fw-bold small">Ngày bắt đầu áp dụng</label>
+                                <label class="form-label fw-bold small">Ngày bắt đầu</label>
                                 <input type="date" id="cp-startdate" class="form-control" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-bold small">Ngày hết hạn mã</label>
+                                <label class="form-label fw-bold small">Ngày hết hạn</label>
                                 <input type="date" id="cp-enddate" class="form-control" required>
                             </div>
                         </div>
-
                         <button type="button" class="btn btn-dark w-100 fw-bold mt-2" onclick="createNewCoupon()">Kích Hoạt Coupon</button>
                     </form>
                 </div>
@@ -300,22 +269,22 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- JAVASCRIPT XỬ LÝ LOGIC ĐỘNG VÀ BIỂU ĐỒ      -->
-    <!-- ========================================== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
-
-        // Khai báo biến lưu trữ instance của biểu đồ để tránh lỗi đè canvas
         let analyticsChartInstance = null;
         let userPieChartInstance = null;
 
-        // Điền sẵn ngày hôm nay vào ô Coupon Date để admin Duy đỡ mất công nhập lại
         document.getElementById('cp-startdate').value = new Date().toISOString().split('T')[0];
 
-        // Chuyển đổi qua lại giữa các menu mục lục
+        // Định dạng thời gian hiển thị bao gồm Ngày/Tháng/Năm Giờ:Phút:Giây chuẩn báo cáo của ông Duy
+        function formatFullDateTime(dateString) {
+            if (!dateString) return "Chưa ghi nhận";
+            const d = new Date(dateString);
+            return d.toLocaleDateString('vi-VN') + " " + d.toLocaleTimeString('vi-VN');
+        }
+
         function switchTab(sectionId) {
             document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.sidebar-menu li a').forEach(btn => btn.classList.remove('active'));
@@ -324,12 +293,13 @@
             document.getElementById('btn-' + sectionId).classList.add('active');
 
             if (sectionId === 'section-dashboard') loadDashboardData();
+            if (sectionId === 'section-users-manage') loadCustomersManagementData();
             if (sectionId === 'section-orders') loadOrdersData();
             if (sectionId === 'section-coupons') loadCouponsData();
             if (sectionId === 'section-users') loadUsersStatusData();
         }
 
-        // --- TAB 1: BÁO CÁO & VẼ BIỂU ĐỒ ---
+        // --- TAB 1: DASHBOARD + NHẬT KÝ ĐẦY ĐỦ NGÀY THÁNG ---
         function loadDashboardData() {
             fetch(`${API_BASE}/api/admin/dashboard-stats`)
                 .then(res => res.json())
@@ -338,8 +308,6 @@
                     document.getElementById('stat-visits').innerText = data.totalVisits + " lượt";
                     document.getElementById('stat-clicks').innerText = data.totalClicks + " click";
                     document.getElementById('stat-online').innerText = data.onlineUsersCount + " Trực tuyến";
-
-                    // Vẽ biểu đồ Cột kết hợp Đường (Traffic vs Clicks)
                     initAnalyticsChart(data.totalVisits, data.totalClicks);
                 });
 
@@ -351,12 +319,11 @@
                             <td class="fw-bold text-secondary">@${act.username}</td>
                             <td><span class="badge ${act.action.includes('Truy cập') ? 'bg-primary' : 'bg-secondary'}">${act.action}</span></td>
                             <td class="small text-muted">${act.details}</td>
-                            <td class="small text-muted">${new Date(act.createdAt).toLocaleTimeString('vi-VN')}</td>
+                            <td class="small text-dark fw-bold">${formatFullDateTime(act.createdAt)}</td>
                         </tr>
                     `).join('');
                 });
 
-            // Tiện tay quét số lượng tài khoản online/offline để vẽ biểu đồ tròn bên cạnh
             fetch(`${API_BASE}/api/admin/users-status`)
                 .then(res => res.json())
                 .then(users => {
@@ -366,29 +333,25 @@
                 });
         }
 
-        // Hàm vẽ Biểu đồ kết hợp cột và đường
         function initAnalyticsChart(visits, clicks) {
             const ctx = document.getElementById('analyticsChart').getContext('2d');
-            if (analyticsChartInstance) analyticsChartInstance.destroy(); // Xóa biểu đồ cũ để nạp số liệu mới
-
+            if (analyticsChartInstance) analyticsChartInstance.destroy();
             analyticsChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Hệ thống Mangic Shop tổng quan'],
+                    labels: ['Hệ thống Mangic Shop'],
                     datasets: [
-                        { label: 'Lượt xem trang (Visits)', data: [visits], backgroundColor: '#0d6efd', borderRadius: 8 },
-                        { label: 'Hành vi Click chuột', data: [clicks], type: 'line', borderColor: '#2ec4b6', backgroundColor: '#2ec4b6', tension: 0.4, fill: false }
+                        { label: 'Visits', data: [visits], backgroundColor: '#0d6efd', borderRadius: 8 },
+                        { label: 'Clicks', data: [clicks], type: 'line', borderColor: '#2ec4b6', backgroundColor: '#2ec4b6', tension: 0.4, fill: false }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // Hàm vẽ Biểu đồ tròn thể hiện tỷ lệ On/Off của tài khoản
         function initUserPieChart(online, offline) {
             const ctx = document.getElementById('userPieChart').getContext('2d');
             if (userPieChartInstance) userPieChartInstance.destroy();
-
             userPieChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -399,7 +362,61 @@
             });
         }
 
-        // --- TAB 2: ĐƠN HÀNG ---
+        // --- THÊM MỚI: LOGIC TAB 2 - QUẢN LÝ TÀI KHOẢN + PHÂN HẠNG + XÓA USER ---
+        function loadCustomersManagementData() {
+            fetch(`${API_BASE}/api/admin/customer-stats`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('table-customers-manage').innerHTML = data.map(cust => {
+                        // Thiết lập màu sắc badge cho từng hạng thành viên nhìn cho chất
+                        let badgeClass = "bg-secondary";
+                        if (cust.rank.includes('Vàng')) badgeClass = "bg-warning text-dark";
+                        if (cust.rank.includes('Kim Cương')) badgeClass = "bg-info text-dark";
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">${cust.fullName}</div>
+                                    <div class="small text-muted">@${cust.username} <span class="badge bg-dark">${cust.role}</span></div>
+                                </td>
+                                <td class="fw-bold text-success">${cust.totalOrders} đơn</td>
+                                <td class="text-muted">${cust.canceledOrders} đơn</td>
+                                <td class="fw-bold text-danger">${Number(cust.totalSpent).toLocaleString()} VND</td>
+                                <td><span class="badge ${badgeClass} fw-bold">${cust.rank}</span></td>
+                                <td>
+                                    ${cust.username === 'admin' ? '<span class="text-muted small">Bảo vệ bảo mật</span>' : 
+                                    `<button class="btn btn-sm btn-outline-danger fw-bold" onclick="handleDeleteUser('${cust.username}')"><i class="ti ti-trash"></i> Xóa tài khoản</button>`}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                });
+        }
+
+        // Hàm xử lý kích hoạt xóa tài khoản bằng SweetAlert2
+        function handleDeleteUser(username) {
+            Swal.fire({
+                title: 'Cảnh báo tối cao!',
+                text: `Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản @${username}? Hành động này sẽ xóa sạch dữ liệu giỏ hàng và không thể hoàn tác!`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Xóa ngay lập tức',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`${API_BASE}/api/users/${username}`, { method: "DELETE" })
+                        .then(res => res.json())
+                        .then(data => {
+                            Swal.fire('Đã triệt tiêu!', data.message, 'success');
+                            loadCustomersManagementData(); // Tải lại bảng ngay tắp lự
+                        }).catch(() => Swal.fire('Lỗi', 'Không thể gỡ tài khoản!', 'error'));
+                }
+            });
+        }
+
+        // --- TAB 3: ĐƠN HÀNG ---
         function loadOrdersData() {
             fetch(`${API_BASE}/api/admin/orders`)
                 .then(res => res.json())
@@ -433,7 +450,7 @@
             });
         }
 
-        // --- TAB 3: QUẢN LÝ COUPON CÓ DATE ---
+        // --- TAB 4: COUPON ---
         function loadCouponsData() {
             fetch(`${API_BASE}/api/admin/coupons`)
                 .then(res => res.json())
@@ -446,9 +463,7 @@
                                 <td class="fw-bold">Giảm ${cp.discountPercent}%</td>
                                 <td class="small text-muted">${hetHan}</td>
                                 <td>${cp.usedCount} / ${cp.usageLimit} lượt</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCoupon('${cp._id}')"><i class="ti ti-trash"></i></button>
-                                </td>
+                                <td><button class="btn btn-sm btn-outline-danger" onclick="deleteCoupon('${cp._id}')"><i class="ti ti-trash"></i></button></td>
                             </tr>
                         `;
                     }).join('');
@@ -482,7 +497,7 @@
             });
         }
 
-        // --- TAB 4: GIÁM SÁT TÀI KHOẢN ---
+        // --- TAB 5: GIÁM SÁT TRẠNG THÁI TÀI KHOẢN TRỰC TUYẾN ---
         function loadUsersStatusData() {
             fetch(`${API_BASE}/api/admin/users-status`)
                 .then(res => res.json())
@@ -491,22 +506,20 @@
                         <tr>
                             <td>
                                 <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
-                                <div class="small text-muted">@${user.username}</div>
+                                <div class="small text-muted">@${user.username} <span class="badge bg-secondary">${user.role}</span></div>
                             </td>
-                            <td><span class="badge bg-secondary">${user.role}</span></td>
                             <td>
                                 <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
                                 <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
-                                    ${user.isOnline ? 'Online' : 'Offline'}
+                                    ${user.isOnline ? 'Online (Đang lướt web)' : 'Offline'}
                                 </span>
                             </td>
-                            <td class="small text-muted">${user.isOnline ? 'Đang thao tác' : 'Thoát lúc: ' + new Date(user.lastActive).toLocaleTimeString('vi-VN')}</td>
+                            <td class="small text-dark fw-bold">${formatFullDateTime(user.lastActive)}</td>
                         </tr>
                     `).join('');
                 });
         }
 
-        // --- ĐÃ THÊM: HÀM ĐĂNG XUẤT CHO ADMIN ---
         function handleAdminLogout() {
             Swal.fire({
                 title: 'Xác nhận đăng xuất?',
@@ -520,8 +533,6 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const user = JSON.parse(localStorage.getItem("currentUser"));
-                    
-                    // Gửi tín hiệu báo ngoại tuyến lên Render
                     if (user) {
                         fetch(`${API_BASE}/api/auth/logout-status`, {
                             method: "POST",
@@ -529,15 +540,12 @@
                             body: JSON.stringify({ username: user.username })
                         });
                     }
-
-                    // Xóa phiên làm việc và đá ra trang login client
                     localStorage.removeItem("currentUser");
                     window.location.href = "../dangnhap.html";
                 }
             });
         }
 
-        // Tự động kích hoạt khi mở trang và lặp lại liên tục sau mỗi 10 giây
         document.addEventListener("DOMContentLoaded", function() {
             loadDashboardData();
             setInterval(() => {
