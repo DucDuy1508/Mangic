@@ -5,12 +5,11 @@ const bcrypt = require('bcryptjs');
 
 const app = express();
 app.use(express.json());
-app.use(cors()); // Cho phép Live Server (cổng 5500) hoặc Vercel gọi API không bị chặn
+app.use(cors()); // Cho phép Live Server hoặc Vercel gọi API không bị chặn
 
 // ==========================================
 // 1. KẾT NỐI CƠ SỞ DỮ LIỆU (MONGODB LOCAL / CLOUD)
 // ==========================================
-// ĐÃ SỬA: Sử dụng biến môi trường process.env.MONGO_URI để nạp chuỗi MongoDB Atlas khi lên Render
 const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/Mangic";
 
 mongoose.connect(mongoURI)
@@ -29,51 +28,106 @@ const UserSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 
 // ==========================================
-// 3. ĐỊNH NGHĨA CẤU TRÚC BẢNG ĐƠN HÀNG MỚI (ORDER)
+// 3. ĐỊNH NGHĨA CẤU TRÚC BẢNG SẢN PHẨM (PRODUCT)
+// ==========================================
+const ProductSchema = new mongoose.Schema({
+    // Đổi kiểu dữ liệu _id thành String để nạp được mọi loại ID tự chế lẫn ID mặc định
+    _id: { type: String, required: true }, 
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    oldPrice: { type: Number },
+    discount: { type: Number, default: 0 },
+    img: { type: String },       
+    image: { type: String },     
+    category: { type: String },
+    author: { type: String },
+    desc: { type: String },      
+    description: { type: String } 
+});
+const Product = mongoose.model('Product', ProductSchema);
+
+// ==========================================
+// 4. ĐỊNH NGHĨA CẤU TRÚC BẢNG ĐƠN HÀNG (ORDER)
 // ==========================================
 const OrderSchema = new mongoose.Schema({
     username: { type: String, required: true },
     items: Array,
     totalAmount: Number,
     discountCode: String,
-    paymentMethod: { type: String, required: true }, // Nhận giá trị 'COD' hoặc 'QR'
-    shippingInfo: {                                  // Lưu thông tin nhận hàng chi tiết
+    paymentMethod: { type: String, required: true }, 
+    shippingInfo: {                                  
         fullName: String,
         phone: String,
         address: String
     },
-    // Tách làm 2 trường độc lập chuẩn hệ thống thương mại điện tử
-    orderStatus: { type: String, default: 'Chờ xử lý' },      // Chờ xử lý, Đang giao, Giao hàng thành công, Hủy đơn
-    paymentStatus: { type: String, default: 'Chờ thanh toán' }, // Chờ thanh toán, Đã thanh toán
-    orderCode: { type: String, required: true },    // Mã đối chiếu đơn hàng mẫu (MGCxxxxxx)
+    orderStatus: { type: String, default: 'Chờ xử lý' },      
+    paymentStatus: { type: String, default: 'Chờ thanh toán' }, 
+    orderCode: { type: String, required: true },    
     createdAt: { type: Date, default: Date.now }
 });
 const Order = mongoose.model('Order', OrderSchema);
 
 // ==========================================
-// 3.5. ĐỊNH NGHĨA CẤU TRÚC MÃ GIẢM GIÁ (COUPON)
+// 5. ĐỊNH NGHĨA CẤU TRÚC MÃ GIẢM GIÁ (COUPON)
 // ==========================================
 const CouponSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true },
-    discountPercent: { type: Number, required: true }, // % giảm giá
-    applicableProducts: [String],                      // Mảng chứa ID/Key của truyện áp dụng
+    discountPercent: { type: Number, required: true }, 
+    applicableProducts: [String],                      
     startDate: { type: Date, default: Date.now },
-    endDate: { type: Date },                           // Có thể null (dùng đến khi hết số lượng)
-    usageLimit: { type: Number, required: true },      // Tổng số lượng mã phát ra
-    usedCount: { type: Number, default: 0 },           // Số lượng đã sử dụng
+    endDate: { type: Date },                           
+    usageLimit: { type: Number, required: true },      
+    usedCount: { type: Number, default: 0 },           
     createdAt: { type: Date, default: Date.now }
 });
 const Coupon = mongoose.model('Coupon', CouponSchema);
 
+
 // ==========================================
-// 4. HỆ THỐNG CÁC API XỬ LÝ CHO KHÁCH HÀNG (CLIENT)
+// 6. HỆ THỐNG CÁC API XỬ LÝ SẢN PHẨM (ĐÃ SỬA: CHẤP NHẬN ID TỰ CHẾ)
 // ==========================================
 
-// --- [API ĐĂNG KÝ TÀI KHOẢN] ---
+// --- [API LẤY TOÀN BỘ SẢN PHẨM] ---
+app.get('/api/products', async (req, res) => {
+    try {
+        const products = await Product.find({});
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: "Không thể lấy danh sách sản phẩm!" });
+    }
+});
+
+// --- [API LẤY CHI TIẾT 1 SẢN PHẨM THEO ID] ---
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(">>> [LOG BACKEND] Thiết bị đang yêu cầu bốc dữ liệu ID truyện:", id);
+
+        // ĐÃ SỬA: Bỏ hàm check isValid của Mongoose để chấp nhận chuỗi tự chế "a000..." của ông
+        const product = await Product.findById(id);
+        
+        if (!product) {
+            console.log(`>>> [LOG BACKEND] Thất bại: Không tìm thấy ID ${id} trong database!`);
+            return res.status(404).json({ error: "Không tìm thấy cuốn truyện này trên database!" });
+        }
+        
+        console.log(`>>> [LOG BACKEND] Thành công: Đã tìm thấy truyện "${product.name}"!`);
+        res.json(product);
+    } catch (error) {
+        console.error("Lỗi hệ thống Backend:", error);
+        res.status(500).json({ error: "Lỗi hệ thống khi tải chi tiết sản phẩm!" });
+    }
+});
+
+
+// ==========================================
+// 7. HỆ THỐNG CÁC API XỬ XỬ LÝ CHO KHÁCH HÀNG (CLIENT)
+// ==========================================
+
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password, role, fullName } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10); // Mã hóa bảo mật mật khẩu
+        const hashedPassword = await bcrypt.hash(password, 10); 
         
         const newUser = new User({ username, password: hashedPassword, role, fullName });
         await newUser.save();
@@ -83,7 +137,6 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// --- [API ĐĂNG NHẬP HỆ THỐNG] ---
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -107,38 +160,20 @@ app.post('/api/login', async (req, res) => {
     });
 });
 
-// --- [API LẤY TOÀN BỘ USER - QUẢN TRỊ ADMIN] ---
-app.get('/api/users', async (req, res) => {
-    try {
-        const users = await User.find({}, '-password'); // Ẩn mật khẩu để bảo mật dữ liệu
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ error: "Không thể lấy danh sách người dùng!" });
-    }
-});
-
-// --- [API XÓA USER - QUẢN TRỊ ADMIN] ---
-app.delete('/api/users/:username', async (req, res) => {
+app.get('/api/orders/history/:username', async (req, res) => {
     try {
         const { username } = req.params;
-        
-        if (username === 'admin') {
-            return res.status(400).json({ error: "Không thể xóa tài khoản Admin tối cao!" });
-        }
-
-        await User.findOneAndDelete({ username });
-        res.json({ message: "Đã xóa người dùng thành công!" });
+        const userOrders = await Order.find({ username }).sort({ createdAt: -1 });
+        res.json(userOrders);
     } catch (error) {
-        res.status(500).json({ error: "Lỗi hệ thống, không thể xóa user!" });
+        console.error("Lỗi lấy lịch sử đơn hàng:", error);
+        res.status(500).json({ error: "Không thể tải lịch sử đơn hàng của người dùng!" });
     }
 });
 
-// --- [API KHỞI TẠO ĐƠN HÀNG TRÊN TRANG THANH TOÁN CLIENT] ---
 app.post('/api/orders', async (req, res) => {
     try {
         const { username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode } = req.body;
-        
-        // TỰ ĐỘNG HÓA: Nếu điền QR thì mặc định Đã thanh toán, nếu COD thì Chờ thanh toán
         const initialPayStatus = (paymentMethod === 'QR') ? 'Đã thanh toán' : 'Chờ thanh toán';
         const initialOrderStatus = 'Chờ xử lý';
 
@@ -155,17 +190,14 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// --- [API CẬP NHẬT TRẠNG THÁI KHÁCH BẤM XÁC NHẬN QR TRÊN CLIENT] ---
 app.put('/api/orders/:id/pay', async (req, res) => {
     try {
         const { id } = req.params;
         const order = await Order.findById(id);
-        
         if (!order) return res.status(404).json({ error: "Đơn hàng không tồn tại trên hệ thống!" });
         
-        // Kiểm tra thời gian đếm ngược 15 phút thực tế của máy chủ
         const now = new Date();
-        const timeDiff = (now - new Date(order.createdAt)) / 1000 / 60; // Quy đổi ra số phút
+        const timeDiff = (now - new Date(order.createdAt)) / 1000 / 60; 
         
         if (timeDiff > 15 || order.orderStatus === 'Hủy đơn') {
             order.orderStatus = 'Hủy đơn';
@@ -173,7 +205,6 @@ app.put('/api/orders/:id/pay', async (req, res) => {
             return res.status(400).json({ error: "Đơn hàng đã quá hạn 15 phút quy định và bị hệ thống hủy bỏ!" });
         }
 
-        // Khách quét QR thành công thì cập nhật trạng thái thanh toán
         order.paymentStatus = 'Đã thanh toán';
         await order.save();
         res.json({ message: "Xác thực trạng thái thanh toán đơn hàng thành công!" });
@@ -182,24 +213,33 @@ app.put('/api/orders/:id/pay', async (req, res) => {
     }
 });
 
-// --- [API LẤY LỊCH SỬ ĐƠN HÀNG CỦA RIÊNG USER ĐANG ĐĂNG NHẬP] ---
-app.get('/api/orders/history/:username', async (req, res) => {
+
+// ==========================================
+// 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
+// ==========================================
+
+app.get('/api/users', async (req, res) => {
     try {
-        const { username } = req.params;
-        const userOrders = await Order.find({ username }).sort({ createdAt: -1 });
-        res.json(userOrders);
+        const users = await User.find({}, '-password'); 
+        res.json(users);
     } catch (error) {
-        console.error("Lỗi lấy lịch sử đơn hàng:", error);
-        res.status(500).json({ error: "Không thể tải lịch sử đơn hàng của người dùng!" });
+        res.status(500).json({ error: "Không thể lấy danh sách người dùng!" });
     }
 });
 
+app.delete('/api/users/:username', async (req, res) => {
+    try {
+        const { username } = req.params;
+        if (username === 'admin') {
+            return res.status(400).json({ error: "Không thể xóa tài khoản Admin tối cao!" });
+        }
+        await User.findOneAndDelete({ username });
+        res.json({ message: "Đã xóa người dùng thành công!" });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi hệ thống, không thể xóa user!" });
+    }
+});
 
-// ==========================================
-// 5. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
-// ==========================================
-
-// --- [API 1: LẤY TOÀN BỘ ĐƠN HÀNG HỆ THỐNG] ---
 app.get('/api/admin/orders', async (req, res) => {
     try {
         const orders = await Order.find().sort({ createdAt: -1 });
@@ -209,11 +249,10 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-// --- [API 2: CẬP NHẬT TÁCH BIỆT 2 LOẠI TRẠNG THÁI THỦ CÔNG] ---
 app.put('/api/admin/orders/:id/update-status', async (req, res) => {
     try {
         const { id } = req.params;
-        const { orderStatus, paymentStatus } = req.body; // Nhận tách biệt lẻ từng trường từ Admin gửi lên
+        const { orderStatus, paymentStatus } = req.body; 
         
         const updateData = {};
         if (orderStatus) updateData.orderStatus = orderStatus;
@@ -228,28 +267,24 @@ app.put('/api/admin/orders/:id/update-status', async (req, res) => {
     }
 });
 
-// --- [API 3: THỐNG KÊ TÁCH BIỆT ĐƠN ĐẶT / ĐƠN HỦY THEO KHÁCH HÀNG] ---
 app.get('/api/admin/customer-stats', async (req, res) => {
     try {
         const stats = await Order.aggregate([
             {
                 $group: {
-                    _id: "$username", // Gom dữ liệu theo từng tài khoản khách
-                    // 1. Đếm tổng số đơn hợp lệ (Mọi trạng thái khác 'Hủy đơn')
+                    _id: "$username", 
                     totalOrders: {
                         $sum: { $cond: [{ $ne: ["$orderStatus", "Hủy đơn"] }, 1, 0] }
                     },
-                    // 2. Đếm tổng số đơn bị hủy (Trạng thái bằng 'Hủy đơn')
                     canceledOrders: {
                         $sum: { $cond: [{ $eq: ["$orderStatus", "Hủy đơn"] }, 1, 0] }
                     },
-                    // 3. Chỉ cộng dồn số tiền tích lũy từ những đơn đã thu tiền thành công ('Đã thanh toán')
                     totalSpent: {
                         $sum: { $cond: [{ $eq: ["$paymentStatus", "Đã thanh toán"] }, "$totalAmount", 0] }
                     }
                 }
             },
-            { $sort: { totalOrders: -1 } } // Sắp xếp khách mua nhiều đơn lên trước
+            { $sort: { totalOrders: -1 } } 
         ]);
         res.json(stats);
     } catch (error) {
@@ -257,7 +292,6 @@ app.get('/api/admin/customer-stats', async (req, res) => {
     }
 });
 
-// --- [API 4: QUẢN LÝ COUPON - LẤY DANH SÁCH] ---
 app.get('/api/admin/coupons', async (req, res) => {
     try {
         const coupons = await Coupon.find().sort({ createdAt: -1 });
@@ -267,7 +301,6 @@ app.get('/api/admin/coupons', async (req, res) => {
     }
 });
 
-// --- [API 5: QUẢN LÝ COUPON - TẠO MỚI] ---
 app.post('/api/admin/coupons', async (req, res) => {
     try {
         const { code, discountPercent, applicableProducts, startDate, endDate, usageLimit } = req.body;
@@ -281,7 +314,6 @@ app.post('/api/admin/coupons', async (req, res) => {
     }
 });
 
-// --- [API TỰ ĐỘNG TĂNG SỐ LƯỢT DÙNG CỦA COUPON LÊN +1 KHI ĐẶT HÀNG THÀNH CÔNG] ---
 app.put('/api/admin/coupons/use', async (req, res) => {
     try {
         const { code } = req.body;
@@ -300,7 +332,6 @@ app.put('/api/admin/coupons/use', async (req, res) => {
     }
 });
 
-// --- [API 6: QUẢN LÝ COUPON - XÓA] ---
 app.delete('/api/admin/coupons/:id', async (req, res) => {
     try {
         await Coupon.findByIdAndDelete(req.params.id);
@@ -311,8 +342,7 @@ app.delete('/api/admin/coupons/:id', async (req, res) => {
 });
 
 // ==========================================
-// 6. KHỞI CHẠY HỆ THỐNG MÁY CHỦ
+// 9. KHỞI CHẠY HỆ THỐNG MÁY CHỦ
 // ==========================================
-// ĐÃ SỬA: Cấu hình cổng động linh hoạt thông qua biến môi trường process.env.PORT để thích ứng với mọi hạ tầng Cloud
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`>>> Server Back-end đang chạy ổn định ở cổng ${PORT}`));

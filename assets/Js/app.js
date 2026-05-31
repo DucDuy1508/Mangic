@@ -1,6 +1,5 @@
-const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : "https://mangic.onrender.com";
+var API_URL = window.API_URL || (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com");
+
 // ==========================================
 // 1. XỬ LÝ THANH ĐIỀU HƯỚNG (NAVBAR ACTIVE)
 // ==========================================
@@ -8,9 +7,7 @@ const navItems = document.querySelectorAll('.nav-link');
 navItems.forEach(item => {
     item.onclick = function(){
         var activeNavbarItem = document.querySelector('.nav-item .active');
-        console.log(activeNavbarItem)
-        if(this.classList.contains('active') === false)
-        {
+        if(activeNavbarItem && this.classList.contains('active') === false) {
             activeNavbarItem.classList.remove('active');
             this.classList.add('active');
         }
@@ -26,13 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const products = document.querySelectorAll('.product-item');
 
     function filterManga() {
-        if (!searchInput) return; // Bảo vệ nếu trang đó không có ô tìm kiếm
+        if (!searchInput) return; 
         const keyword = searchInput.value.toLowerCase().trim();
-        
-        // Lấy danh sách các thể loại đang được tích (checked)
-        const activeCategories = Array.from(checkboxes)
-            .filter(box => box.checked)
-            .map(box => box.id); 
+        const activeCategories = Array.from(checkboxes).filter(box => box.checked).map(box => box.id); 
 
         products.forEach(item => {
             const nameEl = item.querySelector('.product-name');
@@ -40,14 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = nameEl.textContent.toLowerCase();
             const itemCategories = item.getAttribute('data-category') ? item.getAttribute('data-category').split(' ') : [];
 
-            // Kiểm tra khớp tên
             const matchesSearch = name.includes(keyword);
+            const matchesCategory = activeCategories.length === 0 || activeCategories.every(cat => itemCategories.includes(cat));
 
-            // Kiểm tra khớp thể loại
-            const matchesCategory = activeCategories.length === 0 || 
-                activeCategories.every(cat => itemCategories.includes(cat));
-
-            // HIỂN THỊ: Phải khớp CẢ tìm kiếm VÀ thể loại thì mới hiện
             if (matchesSearch && matchesCategory) {
                 item.style.display = "block";
             } else {
@@ -63,45 +51,51 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==========================================
-// 3. CHUYỂN HƯỚNG SANG TRANG CHI TIẾT
+// 3. CHUYỂN HƯỚNG SANG TRANG CHI TIẾT (ĐÃ SỬA: TRUYỀN ID MONGODB CHUẨN)
 // ==========================================
 const productCards = document.querySelectorAll('.product-card');
 productCards.forEach(card => {
     card.style.cursor = 'pointer'; 
     card.addEventListener('click', function() {
-        const nameEl = card.querySelector('.product-name');
-        const priceEl = card.querySelector('.product-price');
-        const imgEl = card.querySelector('.product-img');
         const parentItem = card.closest('.product-item');
+        
+        // Bốc cái ID thực tế được lưu trong data-id của thẻ HTML (Ví dụ: data-id="${item._id}")
+        let productId = card.getAttribute('data-id') || (parentItem ? parentItem.getAttribute('data-id') : null);
+        
+        // Phương án sơ cua: Nếu không có data-id, tự động bốc từ thuộc tính onclick của nút mua nhanh nếu có
+        if (!productId && parentItem) {
+            const btnAddToCart = parentItem.querySelector('[onclick^="addToCart"]');
+            if (btnAddToCart) {
+                const match = btnAddToCart.getAttribute('onclick').match(/addToCart\('([^']+)'/);
+                if (match) productId = match[1];
+            }
+        }
 
-        const name = nameEl ? nameEl.innerText : '';
-        const price = priceEl ? priceEl.innerText : '';
-        const img = imgEl ? imgEl.src : '';
-        const cate = parentItem ? parentItem.getAttribute('data-category') : '';
-
-        window.location.href = `sanpham.html?name=${name}&price=${price}&img=${img}&cate=${cate}`;
+        if (productId) {
+            // Đá sang trang chi tiết kèm cái ID chuẩn khít để detail.js bốc dữ liệu
+            window.location.href = `sanpham.html?id=${productId}`;
+        } else {
+            console.error("Không tìm thấy ID của sản phẩm này trên giao diện HTML!");
+        }
     });
 });
 
 // ==========================================
-// 4. KIỂM TRA PHIÊN ĐĂNG NHẬP & ĐĂNG XUẤT (GOM ĐƠN GIẢN)
+// 4. KIỂM TRA PHIÊN ĐĂNG NHẬP & ĐĂNG XUẤT
 // ==========================================
 document.addEventListener("DOMContentLoaded", function() {
     const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-    
     const userLink = document.getElementById("userLink");
     const userInfoBlock = document.getElementById("userInfoBlock");
     const welcomeName = document.getElementById("welcomeName");
     const btnLogout = document.getElementById("btnLogout");
 
-    // Nếu đã đăng nhập thành công
     if (currentUser) {
         if (userLink) userLink.style.setProperty('display', 'none', 'important');
         if (userInfoBlock) userInfoBlock.style.setProperty('display', 'flex', 'important');
         if (welcomeName) welcomeName.innerText = "Xin chào, " + currentUser.fullName;
     }
 
-    // Xử lý sự kiện bấm nút Đăng xuất
     if (btnLogout) {
         btnLogout.addEventListener("click", function() {
             Swal.fire({
@@ -132,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // ==========================================
-// 5. HÀM MUA NHANH TẠI TRANG CHỦ / CỬA HÀNG (THẤP TOAST)
+// 5. HÀM MUA NHANH TẠI TRANG CHỦ / CỬA HÀNG
 // ==========================================
 function addToCart(id, name, price, image) {
     const currentUser = JSON.parse(localStorage.getItem("currentUser"));
@@ -172,7 +166,6 @@ function addToCart(id, name, price, image) {
 
     localStorage.setItem(cartKey, JSON.stringify(cart));
 
-    // Bắn thông báo rớt xuống dưới thanh Header (85px)
     Swal.fire({
         icon: 'success',
         title: 'Đã thêm vào giỏ hàng!',
@@ -189,7 +182,7 @@ function addToCart(id, name, price, image) {
 }
 
 // ==========================================
-// 6. XỬ LÝ NÚT THÊM VÀO GIỎ TẠI TRANG CHI TIẾT (THẤP TOAST)
+// 6. XỬ LÝ NÚT THÊM VÀO GIỎ TẠI TRANG CHI TIẾT (ĐÃ SỬA CHECK ID)
 // ==========================================
 document.addEventListener("DOMContentLoaded", function() {
     const btnAdd = document.getElementById("btnAddToCartDetail");
@@ -215,9 +208,14 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             const urlParams = new URLSearchParams(window.location.search);
-            const productId = urlParams.get('id') || "manga_detail"; 
-            const productName = document.getElementById("detail-name").innerText;
+            const productId = urlParams.get('id'); 
             
+            if (!productId) {
+                Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không tìm thấy mã sản phẩm hợp lệ!' });
+                return;
+            }
+
+            const productName = document.getElementById("detail-name").innerText;
             const priceText = document.getElementById("detail-price").innerText;
             const productPrice = Number(priceText.replace(/[^0-9]/g, ''));
             const productImage = document.getElementById("main-img").getAttribute("src");
@@ -243,7 +241,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
             localStorage.setItem(cartKey, JSON.stringify(cart));
 
-            // Bắn thông báo rớt xuống dưới thanh Header (85px)
             Swal.fire({
                 icon: 'success',
                 title: 'Đã thêm vào giỏ hàng!',

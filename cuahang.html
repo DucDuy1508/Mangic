@@ -1,489 +1,320 @@
 <!DOCTYPE html>
-
 <html lang="vi">
-
-    <head>
-
-        <meta charset="UTF-8">
-
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel="stylesheet" href="./assets/css/style.css">
-
     <link rel="stylesheet" href="./assets/css/responsive.css">
-
     <link rel="stylesheet" href="./assets/css/cuahang.css">
-
-    <!-- themify icon cdn -->
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
-
-    <!-- fontawesome -->
-
     <link rel="stylesheet" href="./assets/font/fontawesome-free-6.6.0-web/css/all.min.css">
-
-    <!-- Boostrap CDN -->
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-
     <title>Mangic - Cửa Hàng</title>
-
-    </head>
-
-    <body>
-
-        <!-- header -->
-
-        <header id="header" class="">
-
+</head>
+<body>
+    <header id="header" class="">
         <div class="header-logo">
-
-            <a href=""><img src="./assets/img/logo.png" alt="Mangic Logo" class="logo-img"></a>
-
+            <a href="index.html"><img src="./assets/img/logo.png" alt="Mangic Logo" class="logo-img"></a>
         </div>
-
         <ul class="navbar nav-underline">
-
             <li class="nav-item"><a href="index.html" class="nav-link">Trang chủ</a></li>
-
             <li class="nav-item"><a href="cuahang.html" class="nav-link active">Cửa hàng</a></li>
-
             <li class="nav-item"><a href="index.html#about" class="nav-link">Giới thiệu</a></li>
-
             <li class="nav-item"><a href="index.html#services" class="nav-link">Dịch vụ</a></li>
-
             <li class="nav-item"><a href="index.html#blog" class="nav-link">Bài viết</a></li>
-
             <li class="nav-item"><a href="index.html#contact" class="nav-link">Liên hệ</a></li>
-
         </ul>
-
         <div class="header-control d-flex align-items-center gap-3">
-    <i class="header-control__icon ti ti-shopping-cart" style="cursor: pointer;"></i>
-    
-    <a href="dangnhap.html" id="userLink" class="text-decoration-none d-flex align-items-center gap-1" style="color: #666;">
-        <i class="header-control__icon ti ti-user" style="margin-right: 2px;"></i>
-        <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">Đăng nhập</span>
-    </a>
+            <a href="giohang.html" style="color: inherit;">
+                <i class="header-control__icon ti ti-shopping-cart" style="cursor: pointer;"></i>
+            </a>
+            
+            <a href="dangnhap.html" id="userLink" class="text-decoration-none d-flex align-items-center gap-1" style="color: #666;">
+                <i class="header-control__icon ti ti-user" style="margin-right: 2px;"></i>
+                <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">Đăng nhập</span>
+            </a>
 
-    <div id="userInfoBlock" class="d-flex align-items-center gap-2" style="display: none !important;">
-        <span id="welcomeName" class="fw-bold" style="font-size: 14px; color: #ffbc00; letter-spacing: 0.3px;"></span>
-        <button id="btnLogout" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 12px; padding: 2px 8px;">Đăng xuất</button>
-    </div>
-</div>
-
+            <div id="userInfoBlock" class="d-flex align-items-center gap-2" style="display: none !important;">
+                <span id="welcomeName" class="fw-bold" style="font-size: 14px; color: #ffbc00; letter-spacing: 0.3px;"></span>
+                <button id="btnLogout" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 12px; padding: 2px 8px;">Đăng xuất</button>
+            </div>
+        </div>
     </header>
 
     <div id="banner">
-
         <div class="container">
-
             <div class="row align-items-center justify-content-between">
-
                 <div class="banner-content col-lg-5 col-sm-12 mt-sm-12">
-
                     <h3 class="banner-title">Mangic - Cửa hàng Manga</h3>
-
                     <p class="banner-desc">
-
                         Vũ trụ Manga & Game thu nhỏ ngay trong tầm tay bạn!
-
                     </p>
-
-                    <div class="banner-link">
-
-                    </div>
-
                 </div>
-
                 <div class="banner-photo col-lg-7 col-sm-12">
-
                     <img src="./assets/img/carousel.png" alt="" class="banner-img">
-
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
     <div id="shop-page" class="py-5">
-
-    <div class="container">
-
-        <div class="row">
-
-            <aside class="col-lg-3 col-md-4 mb-4">
-
-                <div class="filter-wrapper p-4 shadow-sm rounded bg-light">
-
-                    <h5 class="mb-3">Tìm kiếm</h5>
-
-                    <div class="input-group mb-4">
-    <input type="text" id="search-input" class="form-control" placeholder="Tìm tên truyện (vd: Dr. Stone)...">
-    <button class="btn btn-dark" type="button" id="search-button">
-        <i class="ti ti-search"></i>
-    </button>
-</div>
-
-                    <h5 class="mb-3">Thể loại</h5>
-
-                    <div class="category-list">
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="action">
-
-                            <label class="form-check-label" for="action">Action</label>
-
+        <div class="container">
+            <div class="row">
+                <aside class="col-lg-3 col-md-4 mb-4">
+                    <div class="filter-wrapper p-4 shadow-sm rounded bg-light">
+                        <h5 class="mb-3">Tìm kiếm</h5>
+                        <div class="input-group mb-4">
+                            <input type="text" id="search-input" class="form-control" placeholder="Tìm tên truyện (vd: Dr. Stone)...">
+                            <button class="btn btn-dark" type="button" id="search-button">
+                                <i class="ti ti-search"></i>
+                            </button>
                         </div>
 
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="adventure">
-
-                            <label class="form-check-label" for="adventure">Adventure</label>
-
-                        </div>
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="comedy">
-
-                            <label class="form-check-label" for="comedy">Comedy</label>
-
-                        </div>
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="drama">
-
-                            <label class="form-check-label" for="drama">Drama</label>
-
-                        </div>
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="fantasy">
-
-                            <label class="form-check-label" for="fantasy">Fantasy</label>
-
-                        </div>
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="magic">
-
-                            <label class="form-check-label" for="magic">Magic</label>
-
-                        </div>
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="romance">
-
-                            <label class="form-check-label" for="romance">Romance</label>
-
-                        </div>
-
-                        <div class="form-check mb-2">
-
-                            <input class="form-check-input" type="checkbox" id="isekai">
-
-                            <label class="form-check-label" for="isekai">Isekai</label>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </aside>
-
-            <main class="col-lg-9 col-md-8">
-
-                <div class="row g-4" id="product-list">
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="adventure comedy">
-
-                        <div class="product-card">
-<a href="sanpham.html?id=dr-stone">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-1.jpg" alt="" class="product-img">
-
+                        <h5 class="mb-3">Thể loại</h5>
+                        <div class="category-list">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="action">
+                                <label class="form-check-label" for="action">Action</label>
                             </div>
-
-                            <div class="product-name">Dr. Stone</div>
-
-                            <div class="product-price">45,000 VND</div>
-
-                            <i class="product-icon ti ti-plus"></i>
-</a>
-                        </div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action magic">
-
-                        <div class="product-card" >
-<a href="sanpham.html?id=jujutsu-kaisen">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-2.jpg" alt="" class="product-img">
-
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="adventure">
+                                <label class="form-check-label" for="adventure">Adventure</label>
                             </div>
-
-                            <div class="product-name">Jujutsu Kaisen</div>
-
-                            <div class="product-price">59,000 VND</div>
-
-                            <i class="product-icon ti ti-plus"></i>
-</a>
-                        </div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy drama">
-
-                        <div class="product-card">
-<a href="sanpham.html?id=spy-x-family">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-3.jpg" alt="" class="product-img">
-
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="comedy">
+                                <label class="form-check-label" for="comedy">Comedy</label>
                             </div>
-
-                            <div class="product-name">Spy x Family</div>
-
-                            <div class="product-price">49,000 VND</div>
-
-                            <i class="product-icon ti ti-plus"></i>
-</a>
-                        </div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action fantasy drama">
-
-                        <div class="product-card">
-<a href="sanpham.html?id=gachiakuta">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-4.jpg" alt="" class="product-img">
-
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="drama">
+                                <label class="form-check-label" for="drama">Drama</label>
                             </div>
-
-                            <div class="product-name">Gachiakuta</div>
-
-                            <div class="product-price">59,000 VND</div>
-
-                            <i class="product-icon ti ti-plus"></i>
-                        </a>
-                        </div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy">
-
-                        <div class="product-card">
-<a href="sanpham.html?id=dandadan">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-5.jpg" alt="" class="product-img">
-
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="fantasy">
+                                <label class="form-check-label" for="fantasy">Fantasy</label>
                             </div>
-
-                            <div class="product-name">Dandadan</div>
-
-                            <div class="product-price">69,000 VND</div>
-
-                            <i class="product-icon ti ti-plus"></i>
-</a>
-                        </div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy fantasy">
-
-                        <div class="product-card">
-<a href="sanpham.html?id=konosuba">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-6.jpg" alt="" class="product-img">
-
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="magic">
+                                <label class="form-check-label" for="magic">Magic</label>
                             </div>
-
-                            <div class="product-name">Konosuba</div>
-
-                            <div class="product-price">65,000 VND</div>
-
-                            <i class="product-icon ti ti-plus"></i>
-</a>
-                        </div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="drama">
-
-                        <div class="product-card">
-<a href="sanpham.html?id=kakegurui">
-                            <div class="ratio-custom">
-
-                                <img src="./assets/img/product-7.jpg" alt="" class="product-img">
-
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="romance">
+                                <label class="form-check-label" for="romance">Romance</label>
                             </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="isekai">
+                                <label class="form-check-label" for="isekai">Isekai</label>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
 
-                            <div class="product-name">Kakegurui</div>
+                <main class="col-lg-9 col-md-8">
+                    <div class="row g-4" id="product-list">
 
-                            <div class="product-price">72,000 VND</div>
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000001" data-category="adventure comedy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-1.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Dr. Stone</div>
+                                    <div class="product-price">45,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000001', 'Dr. Stone', 45000, './assets/img/product-1.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
 
-                            <i class="product-icon ti ti-plus"></i>
-</a>
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000002" data-category="action magic">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-2.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Jujutsu Kaisen</div>
+                                    <div class="product-price">59,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000002', 'Jujutsu Kaisen', 59000, './assets/img/product-2.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000003" data-category="action comedy drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-3.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Spy x Family</div>
+                                    <div class="product-price">49,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000003', 'Spy x Family', 49000, './assets/img/product-3.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000004" data-category="action fantasy drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-4.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Gachiakuta</div>
+                                    <div class="product-price">59,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000004', 'Gachiakuta', 59000, './assets/img/product-4.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000005" data-category="action comedy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-5.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Dandadan</div>
+                                    <div class="product-price">69,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000005', 'Dandadan', 69000, './assets/img/product-5.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000006" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-6.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Konosuba</div>
+                                    <div class="product-price">65,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000006', 'Konosuba', 65000, './assets/img/product-6.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000007" data-category="drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-7.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Kakegurui</div>
+                                    <div class="product-price">72,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000007', 'Kakegurui', 72000, './assets/img/product-7.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000008" data-category="action comedy fantasy isekai">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-8.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Mairimashita! Iruma-kun</div>
+                                    <div class="product-price">36,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000008', 'Mairimashita! Iruma-kun', 36000, './assets/img/product-8.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000009" data-category="comedy romance">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-9.jpg" alt="Horimiya" class="product-img">
+                                    </div>
+                                    <div class="product-name">Hori-san to Miyamura-kun</div>
+                                    <div class="product-price">48,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000009', 'Hori-san to Miyamura-kun', 48000, './assets/img/product-9.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000010" data-category="action fantasy drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-11.jpg" alt="Jigokuraku" class="product-img">
+                                    </div>
+                                    <div class="product-name">Jigokuraku</div>
+                                    <div class="product-price">64,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000010', 'Jigokuraku', 64000, './assets/img/product-11.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000011" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-10.jpg" alt="Jibaku Shounen Hanako-kun" class="product-img">
+                                    </div>
+                                    <div class="product-name">Jibaku Shounen Hanako-kun</div>
+                                    <div class="product-price">55,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000011', 'Jibaku Shounen Hanako-kun', 55000, './assets/img/product-10.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000012" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-12.jpg" alt="DanMachi" class="product-img">
+                                    </div>
+                                    <div class="product-name">DanMachi</div>
+                                    <div class="product-price">59,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000012', 'DanMachi', 59000, './assets/img/product-12.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000013" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-13.jpg" alt="Tomodachi Game" class="product-img">
+                                    </div>
+                                    <div class="product-name">Tomodachi Game</div>
+                                    <div class="product-price">68,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000013', 'Tomodachi Game', 68000, './assets/img/product-13.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000014" data-category="action comedy fantasy isekai">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-14.jpg" alt="Tensei Shitara Slime Datta Ken" class="product-img">
+                                    </div>
+                                    <div class="product-name">Tensei Shitara Slime Datta Ken</div>
+                                    <div class="product-price">70,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000014', 'Tensei Shitara Slime Datta Ken', 70000, './assets/img/product-14.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000015" data-category="action drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-15.jpg" alt="Attack on Titan" class="product-img">
+                                    </div>
+                                    <div class="product-name">Attack on Titan</div>
+                                    <div class="product-price">36,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000015', 'Attack on Titan', 36000, './assets/img/product-15.jpg')"></i>
+                                </a>
+                            </div>
                         </div>
 
                     </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy fantasy isekai">
-
-<div class="product-card">
-    <a href="sanpham.html?id=mairimashita-irumakun" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-8.jpg" alt="" class="product-img">
+                </main>
+            </div>
         </div>
-        <div class="product-name">Mairimashita! Iruma-kun</div>
-        <div class="product-price">36,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="comedy romance">
-
-                        <div class="product-card">
-    <a href="sanpham.html?id=horimiya" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-9.jpg" alt="Horimiya" class="product-img">
-        </div>
-        <div class="product-name">Hori-san to Miyamura-kun</div>
-        <div class="product-price">48,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action fantasy drama">
-<div class="product-card">
-    <a href="sanpham.html?id=jigokuraku" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-11.jpg" alt="Jigokuraku" class="product-img">
-        </div>
-        <div class="product-name">Jigokuraku</div>
-        <div class="product-price">64,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy fantasy">
-
-                        <div class="product-card">
-    <a href="sanpham.html?id=jibaku-shounen-hanako-kun" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-10.jpg" alt="Jibaku Shounen Hanako-kun" class="product-img">
-        </div>
-        <div class="product-name">Jibaku Shounen Hanako-kun</div>
-        <div class="product-price">55,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy fantasy">
-
-                        <div class="product-card">
-    <a href="sanpham.html?id=danmachi" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-12.jpg" alt="DanMachi" class="product-img">
-        </div>
-        <div class="product-name">DanMachi</div>
-        <div class="product-price">59,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy fantasy">
-
-                        <div class="product-card">
-    <a href="sanpham.html?id=tomodachi-game" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-13.jpg" alt="Tomodachi Game" class="product-img">
-        </div>
-        <div class="product-name">Tomodachi Game</div>
-        <div class="product-price">68,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action comedy fantasy isekai">
-
-                       <div class="product-card">
-    <a href="sanpham.html?id=tensei-shitara-slime-datta-ken" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-14.jpg" alt="Tensei Shitara Slime Datta Ken" class="product-img">
-        </div>
-        <div class="product-name">Tensei Shitara Slime Datta Ken</div>
-        <div class="product-price">70,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-                    <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-category="action drama">
-
-<div class="product-card">
-    <a href="sanpham.html?id=attack-on-titan" class="text-decoration-none text-dark">
-        <div class="ratio-custom">
-            <img src="./assets/img/product-15.jpg" alt="Attack on Titan" class="product-img">
-        </div>
-        <div class="product-name">Attack on Titan</div>
-        <div class="product-price">36,000 VND</div>
-        <i class="product-icon ti ti-plus"></i>
-    </a>
-</div>
-
-                    </div>
-
-
-
-                    </div>
-
-            </main>
-
-        </div>
-
     </div>
 
-</div>
-
-   
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="./assets/Js/data.js"></script> 
-
-
-<script src="./assets/Js/app.js"></script>
-</body>
+    <script src="./assets/Js/app.js"></script>
 </body>
 </html>
