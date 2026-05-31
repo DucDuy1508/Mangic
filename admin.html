@@ -278,7 +278,6 @@
 
         document.getElementById('cp-startdate').value = new Date().toISOString().split('T')[0];
 
-        // Định dạng thời gian hiển thị bao gồm Ngày/Tháng/Năm Giờ:Phút:Giây chuẩn báo cáo của ông Duy
         function formatFullDateTime(dateString) {
             if (!dateString) return "Chưa ghi nhận";
             const d = new Date(dateString);
@@ -299,7 +298,7 @@
             if (sectionId === 'section-users') loadUsersStatusData();
         }
 
-        // --- TAB 1: DASHBOARD + NHẬT KÝ ĐẦY ĐỦ NGÀY THÁNG ---
+        // --- TAB 1: DASHBOARD ---
         function loadDashboardData() {
             fetch(`${API_BASE}/api/admin/dashboard-stats`)
                 .then(res => res.json())
@@ -308,7 +307,9 @@
                     document.getElementById('stat-visits').innerText = data.totalVisits + " lượt";
                     document.getElementById('stat-clicks').innerText = data.totalClicks + " click";
                     document.getElementById('stat-online').innerText = data.onlineUsersCount + " Trực tuyến";
-                    initAnalyticsChart(data.totalVisits, data.totalClicks);
+                    
+                    // ĐÃ SỬA CHUẨN ĐÉT: Truyền mảng dữ liệu chartTimeline động thay vì 2 biến tổng visits, clicks cũ!
+                    initAnalyticsChart(data.chartTimeline || []);
                 });
 
             fetch(`${API_BASE}/api/admin/recent-activities`)
@@ -333,19 +334,60 @@
                 });
         }
 
-        function initAnalyticsChart(visits, clicks) {
+        // ĐÃ SỬA CHUẨN ĐÉT: Hàm vẽ biểu đồ xử lý theo dòng thời gian từng ngày thực tế
+        function initAnalyticsChart(timelineData) {
             const ctx = document.getElementById('analyticsChart').getContext('2d');
             if (analyticsChartInstance) analyticsChartInstance.destroy();
+
+            // Phương án sơ cua: Nếu DB chưa ghi nhận ngày nào, dựng 1 cột giả cho chart đỡ bị crash
+            if (timelineData.length === 0) {
+                timelineData = [{ date: new Date().toISOString().split('T')[0], visits: 0, clicks: 0 }];
+            }
+
+            // Tách mảng dữ liệu động đổ lên trục X hoành và trục Y tung
+            const labels = timelineData.map(item => {
+                const parts = item.date.split('-');
+                return parts.length === 3 ? `${parts[2]}/${parts[1]}` : item.date; // Ép về dạng ngày/tháng DD/MM
+            });
+            const visitsData = timelineData.map(item => item.visits);
+            const clicksData = timelineData.map(item => item.clicks);
+
             analyticsChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Hệ thống Mangic Shop'],
+                    labels: labels, // Trục X động: 29/05, 30/05, 31/05...
                     datasets: [
-                        { label: 'Visits', data: [visits], backgroundColor: '#0d6efd', borderRadius: 8 },
-                        { label: 'Clicks', data: [clicks], type: 'line', borderColor: '#2ec4b6', backgroundColor: '#2ec4b6', tension: 0.4, fill: false }
+                        {
+                            label: 'Lượt xem trang (Visits)',
+                            data: visitsData,
+                            backgroundColor: 'rgba(13, 110, 253, 0.8)',
+                            borderColor: '#0d6efd',
+                            borderWidth: 1,
+                            borderRadius: 5,
+                            barPercentage: 0.4 // Tối ưu: Co mảnh các cột lại cực kỳ thanh thoát chuyên nghiệp
+                        },
+                        {
+                            label: 'Hành vi Clicks',
+                            data: clicksData,
+                            type: 'line', // Chuyển thành dạng đồ thị đường uốn lượn liên kết các ngày
+                            borderColor: '#2ec4b6',
+                            backgroundColor: '#2ec4b6',
+                            pointBackgroundColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            tension: 0.3, // Bo tròn độ gấp khúc lượn sóng mượt mà
+                            fill: false
+                        }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
             });
         }
 
@@ -362,13 +404,12 @@
             });
         }
 
-        // --- THÊM MỚI: LOGIC TAB 2 - QUẢN LÝ TÀI KHOẢN + PHÂN HẠNG + XÓA USER ---
+        // --- TAB 2: QUẢN LÝ TÀI KHOẢN ---
         function loadCustomersManagementData() {
             fetch(`${API_BASE}/api/admin/customer-stats`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('table-customers-manage').innerHTML = data.map(cust => {
-                        // Thiết lập màu sắc badge cho từng hạng thành viên nhìn cho chất
                         let badgeClass = "bg-secondary";
                         if (cust.rank.includes('Vàng')) badgeClass = "bg-warning text-dark";
                         if (cust.rank.includes('Kim Cương')) badgeClass = "bg-info text-dark";
@@ -393,7 +434,6 @@
                 });
         }
 
-        // Hàm xử lý kích hoạt xóa tài khoản bằng SweetAlert2
         function handleDeleteUser(username) {
             Swal.fire({
                 title: 'Cảnh báo tối cao!',
@@ -410,7 +450,7 @@
                         .then(res => res.json())
                         .then(data => {
                             Swal.fire('Đã triệt tiêu!', data.message, 'success');
-                            loadCustomersManagementData(); // Tải lại bảng ngay tắp lự
+                            loadCustomersManagementData();
                         }).catch(() => Swal.fire('Lỗi', 'Không thể gỡ tài khoản!', 'error'));
                 }
             });
@@ -435,7 +475,7 @@
                                 <button class="btn btn-sm btn-outline-dark fw-bold" onclick="updateOrderStatus('${order._id}', 'Đang giao')">Duyệt đi giao</button>
                             </td>
                         </tr>
-                    `).join('');
+                    `);
                 });
         }
 
@@ -497,7 +537,7 @@
             });
         }
 
-        // --- TAB 5: GIÁM SÁT TRẠNG THÁI TÀI KHOẢN TRỰC TUYẾN ---
+        // --- TAB 5: GIÁM SÁT TÀI KHOẢN TRỰC TUYẾN ---
         function loadUsersStatusData() {
             fetch(`${API_BASE}/api/admin/users-status`)
                 .then(res => res.json())
