@@ -216,7 +216,6 @@
                 const bankId = "TPB";
                 const accountNo = "00001507698";
                 const accountName = "Nguyen%20Duc%20Duy";
-                // ĐÃ VÁ LỖI CÚ PHÁP: Chuỗi link VietQR bọc gói an toàn không lo crash code
                 const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${finalTotal}&addInfo=${orderCode}&accountName=${accountName}`;
                 document.getElementById("qrcodeImg").src = qrUrl;
             }
@@ -325,13 +324,11 @@
                         document.getElementById("btnSubmitOrder").disabled = true;
                         Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất chuyển khoản!', 'info');
                         
-                        // KÍCH HOẠT QUÉT NGẦM AN TOÀN: Truyền mã đơn động bọc kín logic
                         startRealtimePaymentCheck(orderCode);
                     }
                 });
             });
 
-            // Hàm quét ngầm kiểm tra bảo mật nghiêm ngặt, triệt tiêu hoàn toàn lỗi khống 
             function startRealtimePaymentCheck(targetOrderCode) {
                 if (paymentCheckInterval) clearInterval(paymentCheckInterval);
                 if (!targetOrderCode) return; 
@@ -367,6 +364,7 @@
                 }, 4000); 
             }
 
+            // ĐỀ SỬA TUYỆT ĐỐI: Biến nút bấm thủ công thành bộ kiểm tra số dư an toàn bảo mật, chống duyệt khống
             document.getElementById("btnConfirmPayment").addEventListener("click", function() {
                 if (!currentOrderId) {
                     Swal.fire('Thông báo', 'Vui lòng nhập thông tin nhận hàng và bấm nút Hoàn tất đặt hàng trước!', 'warning');
@@ -380,20 +378,37 @@
                     didOpen: () => { Swal.showLoading(); }
                 });
 
+                // Ép kiểm tra nghiêm ngặt: Phải quét lịch sử xem Webhook SePay đã duyệt sang "Đã thanh toán" chưa
                 setTimeout(() => {
-                    fetch(`${API_URL}/api/orders/${currentOrderId}/pay`, { method: 'PUT' })
+                    fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                     .then(res => res.json())
-                    .then(data => {
-                        if (paymentCheckInterval) clearInterval(paymentCheckInterval);
-                        clearInterval(countdownInterval);
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Xác thực thành công!',
-                            text: 'Mangic Shop đã nhận được tiền đơn hàng của bạn.',
-                            confirmButtonColor: '#198754'
-                        }).then(() => {
-                            clearCartAndRedirect();
-                        });
+                    .then(orders => {
+                        const myCurrentOrder = orders.find(o => o.orderCode === orderCode);
+                        
+                        if (myCurrentOrder && myCurrentOrder.paymentStatus === 'Đã thanh toán') {
+                            // TIỀN ĐÃ VỀ THẬT (WEBHOOK ĐÃ DUYỆT XONG) -> CHO QUA CỬA
+                            if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+                            clearInterval(countdownInterval);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Xác thực thành công!',
+                                text: 'Mangic Shop đã xác nhận số tiền của hóa đơn này về tài khoản ngân hàng.',
+                                confirmButtonColor: '#198754'
+                            }).then(() => {
+                                clearCartAndRedirect();
+                            });
+                        } else {
+                            // CHƯA CHUYỂN TIỀN HOẶC HACKER -> CHẶN ĐỨNG NGAY LẬP TỨC
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Chưa nhận được thanh toán!',
+                                text: 'Hệ thống đối chiếu tài khoản TPBank chưa thấy số tiền tương ứng. Nếu ông đã chuyển khoản rồi, vui lòng đợi 3-5 giây để hệ thống nhận webhook ngân hàng rồi bấm lại nhé!',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        }
+                    }).catch(err => {
+                        Swal.fire('Lỗi kết nối', 'Không thể kết nối cổng kiểm tra số dư!', 'error');
                     });
                 }, 1500);
             });
