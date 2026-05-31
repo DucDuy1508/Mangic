@@ -340,10 +340,34 @@ app.get('/api/admin/recent-activities', async (req, res) => {
 // --- [API LẤY TRẠNG THÁI ONLINE/OFFLINE CỦA TOÀN BỘ TÀI KHOẢN] ---
 app.get('/api/admin/users-status', async (req, res) => {
     try {
-        const users = await User.find({}, 'username fullName role isOnline lastActive')
-                                .sort({ isOnline: -1, lastActive: -1 });
-        res.json(users);
+        const users = await User.find({}, 'username fullName role isOnline lastActive');
+        
+        const now = new Date();
+        const timeoutLimit = 30 * 1000; // Định nghĩa: Quá 30 giây không tương tác = Offline
+
+        // Duyệt qua từng user để kiểm tra nhịp đập hoạt động cuối cùng
+        const updatedUsers = await Promise.all(users.map(async (user) => {
+            const timeDiff = now - new Date(user.lastActive);
+
+            // Nếu user đang mang cờ Online nhưng thời gian im lặng đã quá 30 giây
+            if (user.isOnline && timeDiff > timeoutLimit) {
+                user.isOnline = false; // Tự động hạ cờ xuống Offline ngầm
+                await User.updateOne({ _id: user._id }, { isOnline: false }); // Cập nhật lại DB
+            }
+            return user;
+        }));
+
+        // Sắp xếp lại: Ai Online thực sự lên đầu, ai mới active lên đầu
+        updatedUsers.sort((a, b) => {
+            if (a.isOnline === b.isOnline) {
+                return new Date(b.lastActive) - new Date(a.lastActive);
+            }
+            return b.isOnline - a.isOnline;
+        });
+
+        res.json(updatedUsers);
     } catch (error) {
+        console.error("Lỗi đồng bộ trạng thái tài khoản:", error);
         res.status(500).json({ error: "Không thể lấy trạng thái các tài khoản!" });
     }
 });
