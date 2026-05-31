@@ -163,7 +163,7 @@
             let membershipTierName = "Thành viên Đồng";
             let appliedCode = "";
             let currentOrderId = "";
-            let paymentCheckInterval = null; // Quản lý vòng lặp quét ngầm Webhook
+            let paymentCheckInterval = null; 
 
             const orderCode = "MGC" + Math.floor(100000 + Math.random() * 900000);
             document.getElementById("txtOrderCode").innerText = orderCode;
@@ -171,7 +171,7 @@
             fetch(`${API_URL}/api/admin/customer-stats`)
             .then(res => res.json())
             .then(stats => {
-                const myStat = stats.find(stat => stat._id === currentUser.username);
+                const myStat = stats.find(stat => stat.username === currentUser.username);
                 const totalSpent = myStat ? myStat.totalSpent : 0;
 
                 if (totalSpent >= 3000000) {
@@ -324,35 +324,46 @@
                         document.getElementById("btnSubmitOrder").disabled = true;
                         Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất chuyển khoản!', 'info');
                         
-                        // KÍCH HOẠT QUÉT NGẦM REALTIME WEBHOOK: Cứ 4 giây tự gọi kiểm tra trạng thái thanh toán đơn
+                        // KÍCH HOẠT QUÉT NGẦM AN TOÀN: Bắt đầu gọi kiểm tra vòng lặp ngầm
                         startRealtimePaymentCheck();
                     }
                 });
             });
 
-            // Hàm tự động quét ngầm kiểm tra đơn xem Webhook đã chuyển thành "Đã thanh toán" chưa
+            // ĐÃ SỬA CHUẨN: Hàm quét ngầm kiểm tra bảo mật, loại bỏ hoàn toàn tình trạng nhảy alert khống
             function startRealtimePaymentCheck() {
                 if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+                
+                console.log(">>> [REALTIME CHECK] Bắt đầu kích hoạt luồng quét ngầm đơn hàng: ", orderCode);
                 
                 paymentCheckInterval = setInterval(() => {
                     fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                     .then(res => res.json())
                     .then(orders => {
+                        // Kiểm tra nghiêm ngặt: Tìm chính xác đơn hàng vừa tạo thông qua orderCode
                         const myCurrentOrder = orders.find(o => o.orderCode === orderCode);
-                        if (myCurrentOrder && myCurrentOrder.paymentStatus === 'Đã thanh toán') {
-                            clearInterval(paymentCheckInterval); // Tìm thấy rồi thì tắt quét ngầm
-                            clearInterval(countdownInterval); // Tắt đồng hồ đếm ngược 15 phút
+                        
+                        // ĐIỀU KIỆN AN TOÀN: Chỉ xử lý khi đơn hàng tồn tại thực tế trên DB và mang cờ "Đã thanh toán"
+                        if (myCurrentOrder) {
+                            console.log(`>>> [REALTIME STATUS] Trạng thái đơn ${orderCode}: [${myCurrentOrder.paymentStatus}]`);
                             
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Thanh toán tự động thành công!',
-                                text: 'Hệ thống đã nhận diện biến động số dư qua Webhook SePay thực tế!',
-                                confirmButtonColor: '#198754'
-                            }).then(() => {
-                                clearCartAndRedirect();
-                            });
+                            if (myCurrentOrder.paymentStatus === 'Đã thanh toán') {
+                                clearInterval(paymentCheckInterval); // Tìm thấy rồi thì tắt quét ngầm lập tức
+                                clearInterval(countdownInterval); // Tắt đồng hồ đếm ngược 15 phút
+                                
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Thanh toán tự động thành công!',
+                                    text: 'Hệ thống đã nhận diện biến động số dư qua Webhook SePay thực tế!',
+                                    confirmButtonColor: '#198754'
+                                }).then(() => {
+                                    clearCartAndRedirect();
+                                });
+                            }
+                        } else {
+                            console.log(`>>> [REALTIME WAIT] Máy chủ đang xử lý nạp đơn ${orderCode}, chờ nhịp sau...`);
                         }
-                    }).catch(err => console.log("Lỗi quét ngầm cổng thanh toán..."));
+                    }).catch(err => console.log("Lỗi luồng quét ngầm cổng thanh toán..."));
                 }, 4000); // 4 giây quét nhịp một lần
             }
 
