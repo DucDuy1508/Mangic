@@ -194,10 +194,15 @@ app.get('/api/orders/history/:username', async (req, res) => {
     }
 });
 
+// --- [API ĐÃ SỬA LỖI: TẠO ĐƠN HÀNG MỚI CHUẨN ĐỒNG BỘ REALTIME WEBHOOK] ---
 app.post('/api/orders', async (req, res) => {
     try {
         const { username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode } = req.body;
-        const initialPayStatus = (paymentMethod === 'QR') ? 'Đã thanh toán' : 'Chờ thanh toán';
+        
+        // ĐÃ SỬA CHUẨN: Dù chọn phương thức nào (QR hay COD) thì khi vừa bấm Đặt hàng xong,
+        // trạng thái đơn bắt buộc phải nằm im ở cờ "Chờ thanh toán" để Frontend kích hoạt quét ngầm.
+        // Chỉ khi nào tiền về túi thực tế nổ Webhook SePay thì mới kích hoạt đổi sang "Đã thanh toán".
+        const initialPayStatus = 'Chờ thanh toán';
         const initialOrderStatus = 'Chờ xử lý';
 
         const newOrder = new Order({ 
@@ -229,6 +234,7 @@ app.put('/api/orders/:id/pay', async (req, res) => {
         }
 
         order.paymentStatus = 'Đã thanh toán';
+        order.orderStatus = 'Đang giao'; // Đồng bộ: Xác thực chuyển khoản thủ công xong đẩy đi giao luôn
         await order.save();
         res.json({ message: "Xác thực trạng thái thanh toán đơn hàng thành công!" });
     } catch (error) {
@@ -290,7 +296,7 @@ app.post('/api/auth/logout-status', async (req, res) => {
 // 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
 // ==========================================
 
-// --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ VẼ BIỂU ĐỒ MƯỢT MÀ] ---
+// --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ V VẼ BIỂU ĐỒ MƯỢT MÀ] ---
 app.get('/api/admin/dashboard-stats', async (req, res) => {
     try {
         const paidOrders = await Order.find({ paymentStatus: 'Đã thanh toán' });
@@ -490,14 +496,13 @@ app.delete('/api/admin/coupons/:id', async (req, res) => {
 });
 
 // ==========================================
-// THÊM MỚI: ENDPOINT WEBHOOK TỰ ĐỘNG XÁC THỰC THANH TOÁN (REALTIME PAYMENT AUTOMATION)
+// ENDPOINT WEBHOOK TỰ ĐỘNG XÁC THỰC THANH TOÁN (REALTIME PAYMENT AUTOMATION)
 // ==========================================
 app.post('/api/webhook/payment', async (req, res) => {
     try {
         const paymentData = req.body; 
         console.log(">>> [WEBHOOK RECEIVED] Tín hiệu biến động số dư nhận được:", paymentData);
 
-        // Hỗ trợ tự động bốc tách orderCode linh hoạt theo cấu trúc trường của PayOS/Sepay/Cassso
         const orderCode = paymentData.orderCode || (paymentData.data && paymentData.data.orderCode) || paymentData.content; 
         const amountPaid = paymentData.amount || (paymentData.data && paymentData.data.amount);
 
@@ -505,7 +510,6 @@ app.post('/api/webhook/payment', async (req, res) => {
             return res.status(400).json({ error: "Webhook thất bại: Không bốc được trường orderCode đối chiếu đơn!" });
         }
 
-        // 1. Truy vấn đơn hàng trong Database
         const order = await Order.findOne({ orderCode: orderCode.trim() });
 
         if (!order) {
@@ -513,19 +517,16 @@ app.post('/api/webhook/payment', async (req, res) => {
             return res.status(404).json({ error: "Đơn hàng đối chiếu Webhook không tồn tại!" });
         }
 
-        // 2. Chặn xử lý trùng lặp nếu đơn này đã được xác nhận thanh toán trước đó
         if (order.paymentStatus === 'Đã thanh toán') {
             return res.json({ success: true, message: "Đơn hàng này đã hoàn tất thanh toán từ trước." });
         }
 
-        // 3. Tự động hóa: Cập nhật trạng thái thanh toán và đẩy đơn đi giao luôn
         order.paymentStatus = 'Đã thanh toán';
         order.orderStatus = 'Đang giao'; 
         await order.save();
 
         console.log(`>>> [WEBHOOK SUCCESS] Đơn hàng ${orderCode} đã được tự động duyệt THÀNH CÔNG!`);
 
-        // 4. Đồng bộ đẩy hành động này vào bảng Nhật ký hoạt động cho Admin xem thời gian thực
         const paymentLog = new UserActivity({
             username: order.username || "Hệ thống tự động",
             action: "Thanh toán tự động",
