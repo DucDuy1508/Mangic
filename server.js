@@ -199,14 +199,17 @@ app.post('/api/orders', async (req, res) => {
     try {
         const { username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode } = req.body;
         
-        // ĐÃ SỬA CHUẨN: Dù chọn phương thức nào (QR hay COD) thì khi vừa bấm Đặt hàng xong,
-        // trạng thái đơn bắt buộc phải nằm im ở cờ "Chờ thanh toán" để Frontend kích hoạt quét ngầm.
-        // Chỉ khi nào tiền về túi thực tế nổ Webhook SePay thì mới kích hoạt đổi sang "Đã thanh toán".
         const initialPayStatus = 'Chờ thanh toán';
         const initialOrderStatus = 'Chờ xử lý';
 
         const newOrder = new Order({ 
-            username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode,
+            username, 
+            items, 
+            totalAmount, 
+            discountCode, 
+            paymentMethod, 
+            shippingInfo, 
+            orderCode: String(orderCode).trim(), // VÁ LỖI CHÍ MẠNG: Cắt sạch khoảng trắng hai đầu khi lưu vào DB
             orderStatus: initialOrderStatus,
             paymentStatus: initialPayStatus
         });
@@ -234,7 +237,7 @@ app.put('/api/orders/:id/pay', async (req, res) => {
         }
 
         order.paymentStatus = 'Đã thanh toán';
-        order.orderStatus = 'Đang giao'; // Đồng bộ: Xác thực chuyển khoản thủ công xong đẩy đi giao luôn
+        order.orderStatus = 'Đang giao'; 
         await order.save();
         res.json({ message: "Xác thực trạng thái thanh toán đơn hàng thành công!" });
     } catch (error) {
@@ -296,7 +299,7 @@ app.post('/api/auth/logout-status', async (req, res) => {
 // 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
 // ==========================================
 
-// --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ V VẼ BIỂU ĐỒ MƯỢT MÀ] ---
+// --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ VẼ BIỂU ĐỒ MƯỢT MÀ] ---
 app.get('/api/admin/dashboard-stats', async (req, res) => {
     try {
         const paidOrders = await Order.find({ paymentStatus: 'Đã thanh toán' });
@@ -510,10 +513,13 @@ app.post('/api/webhook/payment', async (req, res) => {
             return res.status(400).json({ error: "Webhook thất bại: Không bốc được trường orderCode đối chiếu đơn!" });
         }
 
-        const order = await Order.findOne({ orderCode: orderCode.trim() });
+        // ĐÃ SỬA TUYỆT ĐỐI: Tạo một biến chuỗi string sạch băm `.trim()` chống lệch khoảng cách ngân hàng
+        const cleanOrderCode = String(orderCode).trim();
+
+        const order = await Order.findOne({ orderCode: cleanOrderCode });
 
         if (!order) {
-            console.log(`>>> [WEBHOOK ERROR] Không tìm thấy đơn hàng mã ${orderCode} trong Database!`);
+            console.log(`>>> [WEBHOOK ERROR] Không tìm thấy đơn hàng mã [${cleanOrderCode}] trong Database!`);
             return res.status(404).json({ error: "Đơn hàng đối chiếu Webhook không tồn tại!" });
         }
 
@@ -525,12 +531,12 @@ app.post('/api/webhook/payment', async (req, res) => {
         order.orderStatus = 'Đang giao'; 
         await order.save();
 
-        console.log(`>>> [WEBHOOK SUCCESS] Đơn hàng ${orderCode} đã được tự động duyệt THÀNH CÔNG!`);
+        console.log(`>>> [WEBHOOK SUCCESS] Đơn hàng [${cleanOrderCode}] đã được tự động duyệt THÀNH CÔNG!`);
 
         const paymentLog = new UserActivity({
             username: order.username || "Hệ thống tự động",
             action: "Thanh toán tự động",
-            details: `Hóa đơn ${orderCode} tự động xác thực qua Webhook. Số tiền: ${Number(amountPaid || order.totalAmount).toLocaleString()} VND.`
+            details: `Hóa đơn ${cleanOrderCode} tự động xác thực qua Webhook. Số tiền: ${Number(amountPaid || order.totalAmount).toLocaleString()} VND.`
         });
         await paymentLog.save();
 
