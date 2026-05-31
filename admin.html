@@ -468,10 +468,16 @@
                         else if (order.orderStatus === 'Đã giao') orderStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-pill">Đã giao hoàn tất ✓</span>`;
                         else if (order.orderStatus === 'Hủy đơn') orderStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-pill">Đã hủy đơn ❌</span>`;
 
-                        // 2. Phân định huy hiệu Trạng thái Tiền bạc
-                        let paymentStatusBadge = order.paymentStatus === 'Đã thanh toán' 
-                            ? `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán</span>`
-                            : `<span class="badge bg-secondary py-2 px-2 rounded-3">Chờ thanh toán</span>`;
+                        // 2. Phân định huy hiệu Trạng thái Tiền bạc (Cập nhật màu Đỏ cho "Thất bại")
+                        let paymentStatusBadge = "";
+                        if (order.paymentStatus === 'Đã thanh toán') {
+                            paymentStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán</span>`;
+                        } else if (order.paymentStatus === 'Thất bại') {
+                         // Đã sửa: Dùng màu đỏ cảnh báo (bg-danger) cho trạng thái Thất bại
+                            paymentStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-3 text-white fw-bold">Thất bại ❌</span>`;
+                        } else {
+                            paymentStatusBadge = `<span class="badge bg-secondary py-2 px-2 rounded-3">Chờ thanh toán</span>`;
+                        }
 
                         // 3. Thiết kế hình thức thanh toán
                         let methodBadge = order.paymentMethod === 'QR'
