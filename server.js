@@ -293,7 +293,6 @@ app.post('/api/auth/logout-status', async (req, res) => {
 // --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ VẼ BIỂU ĐỒ MƯỢT MÀ] ---
 app.get('/api/admin/dashboard-stats', async (req, res) => {
     try {
-        // 1. Tính toán các số liệu tổng quan ở các khối hộp (Giữ nguyên)
         const paidOrders = await Order.find({ paymentStatus: 'Đã thanh toán' });
         const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
@@ -303,16 +302,15 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
 
         const onlineUsersCount = await User.countDocuments({ isOnline: true });
 
-        // 2. ĐÃ SỬA: Lấy dữ liệu chi tiết của 7 ngày gần nhất để làm trục hoành X giúp đồ thị uốn lượn
         const chartData = await Traffic.find({}).sort({ date: -1 }).limit(7);
-        chartData.reverse(); // Đảo ngược mảng để ngày cũ đứng trước, ngày mới đứng sau
+        chartData.reverse(); 
 
         res.json({
             totalRevenue,
             totalVisits,
             totalClicks,
             onlineUsersCount,
-            chartTimeline: chartData // Trả kèm mảng mượt mà gom theo ngày [{date, visits, clicks}, ...]
+            chartTimeline: chartData 
         });
     } catch (error) {
         res.status(500).json({ error: "Lỗi lấy dữ liệu tổng hợp Admin!" });
@@ -488,6 +486,58 @@ app.delete('/api/admin/coupons/:id', async (req, res) => {
         res.json({ message: "Đã xóa coupon thành công!" });
     } catch (error) {
         res.status(500).json({ error: "Lỗi hệ thống, không thể xóa coupon!" });
+    }
+});
+
+// ==========================================
+// THÊM MỚI: ENDPOINT WEBHOOK TỰ ĐỘNG XÁC THỰC THANH TOÁN (REALTIME PAYMENT AUTOMATION)
+// ==========================================
+app.post('/api/webhook/payment', async (req, res) => {
+    try {
+        const paymentData = req.body; 
+        console.log(">>> [WEBHOOK RECEIVED] Tín hiệu biến động số dư nhận được:", paymentData);
+
+        // Hỗ trợ tự động bốc tách orderCode linh hoạt theo cấu trúc trường của PayOS/Sepay/Cassso
+        const orderCode = paymentData.orderCode || (paymentData.data && paymentData.data.orderCode) || paymentData.content; 
+        const amountPaid = paymentData.amount || (paymentData.data && paymentData.data.amount);
+
+        if (!orderCode) {
+            return res.status(400).json({ error: "Webhook thất bại: Không bốc được trường orderCode đối chiếu đơn!" });
+        }
+
+        // 1. Truy vấn đơn hàng trong Database
+        const order = await Order.findOne({ orderCode: orderCode.trim() });
+
+        if (!order) {
+            console.log(`>>> [WEBHOOK ERROR] Không tìm thấy đơn hàng mã ${orderCode} trong Database!`);
+            return res.status(404).json({ error: "Đơn hàng đối chiếu Webhook không tồn tại!" });
+        }
+
+        // 2. Chặn xử lý trùng lặp nếu đơn này đã được xác nhận thanh toán trước đó
+        if (order.paymentStatus === 'Đã thanh toán') {
+            return res.json({ success: true, message: "Đơn hàng này đã hoàn tất thanh toán từ trước." });
+        }
+
+        // 3. Tự động hóa: Cập nhật trạng thái thanh toán và đẩy đơn đi giao luôn
+        order.paymentStatus = 'Đã thanh toán';
+        order.orderStatus = 'Đang giao'; 
+        await order.save();
+
+        console.log(`>>> [WEBHOOK SUCCESS] Đơn hàng ${orderCode} đã được tự động duyệt THÀNH CÔNG!`);
+
+        // 4. Đồng bộ đẩy hành động này vào bảng Nhật ký hoạt động cho Admin xem thời gian thực
+        const paymentLog = new UserActivity({
+            username: order.username || "Hệ thống tự động",
+            action: "Thanh toán tự động",
+            details: `Hóa đơn ${orderCode} tự động xác thực qua Webhook. Số tiền: ${Number(amountPaid || order.totalAmount).toLocaleString()} VND.`
+        });
+        await paymentLog.save();
+
+        res.status(200).json({ success: true, message: "Webhook xử lý tự động hóa hóa đơn thành công!" });
+
+    } catch (error) {
+        console.error(">>> [WEBHOOK CRITICAL ERROR] Sập luồng Webhook:", error);
+        res.status(500).json({ error: "Lỗi hệ thống khi xử lý tự động hóa Webhook!" });
     }
 });
 
