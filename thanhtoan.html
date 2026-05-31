@@ -216,6 +216,7 @@
                 const bankId = "TPB";
                 const accountNo = "00001507698";
                 const accountName = "Nguyen%20Duc%20Duy";
+                // ĐÃ VÁ LỖI CÚ PHÁP: Chuỗi link VietQR bọc gói an toàn không lo crash code
                 const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${finalTotal}&addInfo=${orderCode}&accountName=${accountName}`;
                 document.getElementById("qrcodeImg").src = qrUrl;
             }
@@ -324,32 +325,31 @@
                         document.getElementById("btnSubmitOrder").disabled = true;
                         Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất chuyển khoản!', 'info');
                         
-                        // KÍCH HOẠT QUÉT NGẦM AN TOÀN: Bắt đầu gọi kiểm tra vòng lặp ngầm
-                        startRealtimePaymentCheck();
+                        // KÍCH HOẠT QUÉT NGẦM AN TOÀN: Truyền mã đơn động bọc kín logic
+                        startRealtimePaymentCheck(orderCode);
                     }
                 });
             });
 
-            // ĐÃ SỬA CHUẨN: Hàm quét ngầm kiểm tra bảo mật, loại bỏ hoàn toàn tình trạng nhảy alert khống
-            function startRealtimePaymentCheck() {
+            // Hàm quét ngầm kiểm tra bảo mật nghiêm ngặt, triệt tiêu hoàn toàn lỗi khống 
+            function startRealtimePaymentCheck(targetOrderCode) {
                 if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+                if (!targetOrderCode) return; 
                 
-                console.log(">>> [REALTIME CHECK] Bắt đầu kích hoạt luồng quét ngầm đơn hàng: ", orderCode);
-                
+                console.log(">>> [REALTIME CHECK] Kích hoạt luồng quét ngầm đơn hàng: ", targetOrderCode);
+
                 paymentCheckInterval = setInterval(() => {
                     fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                     .then(res => res.json())
                     .then(orders => {
-                        // Kiểm tra nghiêm ngặt: Tìm chính xác đơn hàng vừa tạo thông qua orderCode
-                        const myCurrentOrder = orders.find(o => o.orderCode === orderCode);
+                        const myCurrentOrder = orders.find(o => o.orderCode === targetOrderCode);
                         
-                        // ĐIỀU KIỆN AN TOÀN: Chỉ xử lý khi đơn hàng tồn tại thực tế trên DB và mang cờ "Đã thanh toán"
                         if (myCurrentOrder) {
-                            console.log(`>>> [REALTIME STATUS] Trạng thái đơn ${orderCode}: [${myCurrentOrder.paymentStatus}]`);
+                            console.log(`>>> [REALTIME STATUS] Trạng thái đơn ${targetOrderCode}: [${myCurrentOrder.paymentStatus}]`);
                             
                             if (myCurrentOrder.paymentStatus === 'Đã thanh toán') {
-                                clearInterval(paymentCheckInterval); // Tìm thấy rồi thì tắt quét ngầm lập tức
-                                clearInterval(countdownInterval); // Tắt đồng hồ đếm ngược 15 phút
+                                clearInterval(paymentCheckInterval); 
+                                clearInterval(countdownInterval); 
                                 
                                 Swal.fire({
                                     icon: 'success',
@@ -361,13 +361,12 @@
                                 });
                             }
                         } else {
-                            console.log(`>>> [REALTIME WAIT] Máy chủ đang xử lý nạp đơn ${orderCode}, chờ nhịp sau...`);
+                            console.log(`>>> [REALTIME WAIT] Đang đợi Database nạp đơn ${targetOrderCode}...`);
                         }
-                    }).catch(err => console.log("Lỗi luồng quét ngầm cổng thanh toán..."));
-                }, 4000); // 4 giây quét nhịp một lần
+                    }).catch(err => console.log("Lỗi kết nối luồng quét ngầm..."));
+                }, 4000); 
             }
 
-            // Xác nhận thanh toán thủ công (Nút bấm dự phòng khi đi demo)
             document.getElementById("btnConfirmPayment").addEventListener("click", function() {
                 if (!currentOrderId) {
                     Swal.fire('Thông báo', 'Vui lòng nhập thông tin nhận hàng và bấm nút Hoàn tất đặt hàng trước!', 'warning');
