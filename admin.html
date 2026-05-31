@@ -171,14 +171,16 @@
             <div class="table-wrapper">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
-                        <thead class="table-light">
+                        <thead class="table-light text-uppercase small fw-bold text-secondary">
                             <tr>
                                 <th>Mã Đơn</th>
-                                <th>Khách Hàng</th>
+                                <th>Khách Hàng / Giao Nhận</th>
+                                <th>Chi Tiết Sản Phẩm Mua</th>
                                 <th>Tổng Tiền</th>
-                                <th>Thanh Toán</th>
-                                <th>Trạng Thái Đơn</th>
-                                <th>Hành Động</th>
+                                <th>Hình Thức</th>
+                                <th>Trạng Thái Tiền</th>
+                                <th>Vận Chuyển</th>
+                                <th class="text-center">Hành Động Cập Nhật Trạng Thái</th>
                             </tr>
                         </thead>
                         <tbody id="table-orders"></tbody>
@@ -308,7 +310,6 @@
                     document.getElementById('stat-clicks').innerText = data.totalClicks + " click";
                     document.getElementById('stat-online').innerText = data.onlineUsersCount + " Trực tuyến";
                     
-                    // ĐÃ SỬA CHUẨN ĐÉT: Truyền mảng dữ liệu chartTimeline động thay vì 2 biến tổng visits, clicks cũ!
                     initAnalyticsChart(data.chartTimeline || []);
                 });
 
@@ -318,7 +319,7 @@
                     document.getElementById('table-activities').innerHTML = data.map(act => `
                         <tr>
                             <td class="fw-bold text-secondary">@${act.username}</td>
-                            <td><span class="badge ${act.action.includes('Truy cập') ? 'bg-primary' : 'bg-secondary'}">${act.action}</span></td>
+                            <td><span class="badge ${act.action.includes('Thanh toán') || act.action.includes('Xác thực') ? 'bg-success' : act.action.includes('Truy cập') ? 'bg-primary' : 'bg-secondary'}">${act.action}</span></td>
                             <td class="small text-muted">${act.details}</td>
                             <td class="small text-dark fw-bold">${formatFullDateTime(act.createdAt)}</td>
                         </tr>
@@ -334,20 +335,17 @@
                 });
         }
 
-        // ĐÃ SỬA CHUẨN ĐÉT: Hàm vẽ biểu đồ xử lý theo dòng thời gian từng ngày thực tế
         function initAnalyticsChart(timelineData) {
             const ctx = document.getElementById('analyticsChart').getContext('2d');
             if (analyticsChartInstance) analyticsChartInstance.destroy();
 
-            // Phương án sơ cua: Nếu DB chưa ghi nhận ngày nào, dựng 1 cột giả cho chart đỡ bị crash
             if (timelineData.length === 0) {
                 timelineData = [{ date: new Date().toISOString().split('T')[0], visits: 0, clicks: 0 }];
             }
 
-            // Tách mảng dữ liệu động đổ lên trục X hoành và trục Y tung
             const labels = timelineData.map(item => {
                 const parts = item.date.split('-');
-                return parts.length === 3 ? `${parts[2]}/${parts[1]}` : item.date; // Ép về dạng ngày/tháng DD/MM
+                return parts.length === 3 ? `${parts[2]}/${parts[1]}` : item.date;
             });
             const visitsData = timelineData.map(item => item.visits);
             const clicksData = timelineData.map(item => item.clicks);
@@ -355,7 +353,7 @@
             analyticsChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: labels, // Trục X động: 29/05, 30/05, 31/05...
+                    labels: labels,
                     datasets: [
                         {
                             label: 'Lượt xem trang (Visits)',
@@ -364,18 +362,18 @@
                             borderColor: '#0d6efd',
                             borderWidth: 1,
                             borderRadius: 5,
-                            barPercentage: 0.4 // Tối ưu: Co mảnh các cột lại cực kỳ thanh thoát chuyên nghiệp
+                            barPercentage: 0.4
                         },
                         {
                             label: 'Hành vi Clicks',
                             data: clicksData,
-                            type: 'line', // Chuyển thành dạng đồ thị đường uốn lượn liên kết các ngày
+                            type: 'line',
                             borderColor: '#2ec4b6',
                             backgroundColor: '#2ec4b6',
                             pointBackgroundColor: '#fff',
                             pointBorderWidth: 2,
                             pointRadius: 4,
-                            tension: 0.3, // Bo tròn độ gấp khúc lượn sóng mượt mà
+                            tension: 0.3,
                             fill: false
                         }
                     ]
@@ -404,13 +402,14 @@
             });
         }
 
-        // --- TAB 2: QUẢN LÝ TÀI KHOẢN ---
+        // --- TAB 2: QUẢN LÝ CRM TÀI KHOẢN ---
         function loadCustomersManagementData() {
             fetch(`${API_BASE}/api/admin/customer-stats`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('table-customers-manage').innerHTML = data.map(cust => {
                         let badgeClass = "bg-secondary";
+                        if (cust.rank.includes('Bạc')) badgeClass = "bg-secondary text-white";
                         if (cust.rank.includes('Vàng')) badgeClass = "bg-warning text-dark";
                         if (cust.rank.includes('Kim Cương')) badgeClass = "bg-info text-dark";
 
@@ -425,7 +424,7 @@
                                 <td class="fw-bold text-danger">${Number(cust.totalSpent).toLocaleString()} VND</td>
                                 <td><span class="badge ${badgeClass} fw-bold">${cust.rank}</span></td>
                                 <td>
-                                    ${cust.username === 'admin' ? '<span class="text-muted small">Bảo vệ bảo mật</span>' : 
+                                    ${cust.username === 'admin' ? '<span class="text-muted small">Bảo vệ hệ thống</span>' : 
                                     `<button class="btn btn-sm btn-outline-danger fw-bold" onclick="handleDeleteUser('${cust.username}')"><i class="ti ti-trash"></i> Xóa tài khoản</button>`}
                                 </td>
                             </tr>
@@ -456,37 +455,93 @@
             });
         }
 
-        // --- TAB 3: ĐƠN HÀNG ---
+        // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO (ĐÃ ĐỒNG BỘ ERP SỬA ĐỔI CHUYÊN NGHIỆP) ---
         function loadOrdersData() {
             fetch(`${API_BASE}/api/admin/orders`)
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('table-orders').innerHTML = data.map(order => `
-                        <tr>
-                            <td class="fw-bold text-primary">${order.orderCode}</td>
-                            <td>
-                                <div class="fw-bold">${order.shippingInfo.fullName}</div>
-                                <div class="small text-muted">${order.shippingInfo.phone}</div>
-                            </td>
-                            <td class="fw-bold text-danger">${Number(order.totalAmount).toLocaleString()}đ</td>
-                            <td><span class="badge ${order.paymentStatus === 'Đã thanh toán' ? 'bg-success' : 'bg-warning'}">${order.paymentStatus}</span></td>
-                            <td><span class="badge bg-dark">${order.orderStatus}</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-dark fw-bold" onclick="updateOrderStatus('${order._id}', 'Đang giao')">Duyệt đi giao</button>
-                            </td>
-                        </tr>
-                    `);
+                    document.getElementById('table-orders').innerHTML = data.map(order => {
+                        // 1. Phân định huy hiệu Trạng thái Vận chuyển
+                        let orderStatusBadge = "";
+                        if (order.orderStatus === 'Chờ xử lý') orderStatusBadge = `<span class="badge bg-warning text-dark py-2 px-2 rounded-pill">Chờ xử lý</span>`;
+                        else if (order.orderStatus === 'Đang giao') orderStatusBadge = `<span class="badge bg-primary py-2 px-2 rounded-pill">Đang giao 🚚</span>`;
+                        else if (order.orderStatus === 'Đã giao') orderStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-pill">Đã giao hoàn tất ✓</span>`;
+                        else if (order.orderStatus === 'Hủy đơn') orderStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-pill">Đã hủy đơn ❌</span>`;
+
+                        // 2. Phân định huy hiệu Trạng thái Tiền bạc
+                        let paymentStatusBadge = order.paymentStatus === 'Đã thanh toán' 
+                            ? `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán</span>`
+                            : `<span class="badge bg-secondary py-2 px-2 rounded-3">Chờ thanh toán</span>`;
+
+                        // 3. Thiết kế hình thức thanh toán
+                        let methodBadge = order.paymentMethod === 'QR'
+                            ? `<span class="badge border border-info text-info fw-bold px-2 py-1"><i class="ti ti-qrcode me-1"></i> QR Code</span>`
+                            : `<span class="badge border border-warning text-warning fw-bold px-2 py-1"><i class="ti ti-truck me-1"></i> Ship COD</span>`;
+
+                        // 4. Gom mảng danh sách sản phẩm truyện khách đặt mua
+                        let itemsHtml = order.items.map(item => `• <strong>${item.name}</strong> (x${item.quantity})`).join("<br>");
+
+                        // Chặn điều kiện tắt nút: Nếu đơn đã hoàn thành hoặc đã hủy thì khóa cứng không cho bấm bậy phá DB
+                        let isFinished = order.orderStatus === 'Đã giao' || order.orderStatus === 'Hủy đơn' ? 'disabled' : '';
+
+                        return `
+                            <tr>
+                                <td class="fw-bold text-danger">${order.orderCode}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">${order.shippingInfo?.fullName || order.username}</div>
+                                    <small class="text-muted"><i class="ti ti-mobile me-1"></i>${order.shippingInfo?.phone || 'N/A'}</small><br>
+                                    <small class="text-muted d-inline-block text-truncate" style="max-width: 170px;" title="${order.shippingInfo?.address || 'N/A'}"><i class="ti ti-location-pin me-1"></i>${order.shippingInfo?.address || 'N/A'}</small>
+                                </td>
+                                <td class="small text-muted py-2" style="max-width: 240px; line-height: 1.5;">${itemsHtml}</td>
+                                <td class="fw-bold text-dark">${Number(order.totalAmount).toLocaleString()} đ</td>
+                                <td>${methodBadge}</td>
+                                <td>${paymentStatusBadge}</td>
+                                <td>${orderStatusBadge}</td>
+                                <td>
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <button class="btn btn-sm btn-outline-primary fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đang giao', '${order.paymentStatus}')" ${isFinished}>Giao hàng</button>
+                                        <button class="btn btn-sm btn-success fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đã giao', 'Đã thanh toán')" ${isFinished}>Đã giao</button>
+                                        <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Hủy đơn', '${order.paymentStatus}')" ${isFinished}>Hủy đơn</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
                 });
         }
 
-        function updateOrderStatus(id, status) {
-            fetch(`${API_BASE}/api/admin/orders/${id}/update-status`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderStatus: status })
-            }).then(() => {
-                Swal.fire('Thành công', 'Đã chuyển trạng thái đơn hàng!', 'success');
-                loadOrdersData();
+        // Hàm gọi API cập nhật trạng thái đơn hàng tích hợp kiểm tra bảo mật nghiêm ngặt
+        function executeOrderStateUpdate(id, status, payment) {
+            Swal.fire({
+                title: 'Xác nhận xử lý?',
+                text: `Hệ thống chuẩn bị chuyển trạng thái đơn hàng sang tiến trình [${status}].`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1e1e2d',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Đồng ý duyệt',
+                cancelButtonText: 'Bỏ qua'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`${API_BASE}/api/admin/orders/${id}/update-status`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ orderStatus: status, paymentStatus: payment })
+                    })
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.json().then(err => { throw new Error(err.error) });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        Swal.fire('Thành công!', data.message, 'success');
+                        loadOrdersData(); // Tải lại danh sách realtime lập tức
+                    })
+                    .catch(err => {
+                        Swal.fire('Lỗi logic hệ thống', err.message, 'error');
+                    });
+                }
             });
         }
 
@@ -531,9 +586,20 @@
         }
 
         function deleteCoupon(id) {
-            fetch(`${API_BASE}/api/admin/coupons/${id}`, { method: "DELETE" }).then(() => {
-                Swal.fire('Đã xóa', 'Gỡ mã giảm giá thành công.', 'success');
-                loadCouponsData();
+            Swal.fire({
+                title: 'Xóa Coupon?',
+                text: "Mã giảm giá này sẽ bị gỡ bỏ, không cho phép khách hàng nhập sử dụng nữa.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#212529',
+                confirmButtonText: 'Đồng ý xóa'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`${API_BASE}/api/admin/coupons/${id}`, { method: "DELETE" }).then(() => {
+                        Swal.fire('Đã xóa', 'Gỡ mã giảm giá thành công.', 'success');
+                        loadCouponsData();
+                    });
+                }
             });
         }
 
@@ -563,7 +629,7 @@
         function handleAdminLogout() {
             Swal.fire({
                 title: 'Xác nhận đăng xuất?',
-                text: "Bạn sẽ thoát khỏi hệ thống quản trị tối cao của Mangic Shop.",
+                text: "Bạn sẽ thoát khỏi hệ thống quản trị của Mangic Shop.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#1e1e2d',

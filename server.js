@@ -194,7 +194,6 @@ app.get('/api/orders/history/:username', async (req, res) => {
     }
 });
 
-// --- [API ĐÃ SỬA LỖI: TẠO ĐƠN HÀNG MỚI CHUẨN ĐỒNG BỘ REALTIME WEBHOOK] ---
 app.post('/api/orders', async (req, res) => {
     try {
         const { username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode } = req.body;
@@ -209,7 +208,7 @@ app.post('/api/orders', async (req, res) => {
             discountCode, 
             paymentMethod, 
             shippingInfo, 
-            orderCode: String(orderCode).trim(), // VÁ LỖI CHÍ MẠNG: Cắt sạch khoảng trắng hai đầu khi lưu vào DB
+            orderCode: String(orderCode).trim(), 
             orderStatus: initialOrderStatus,
             paymentStatus: initialPayStatus
         });
@@ -296,10 +295,9 @@ app.post('/api/auth/logout-status', async (req, res) => {
 
 
 // ==========================================
-// 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
+// 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN) - BẢN NÂNG CẤP CHUYÊN NGHIỆP CRM
 // ==========================================
 
-// --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ VẼ BIỂU ĐỒ MƯỢT MÀ] ---
 app.get('/api/admin/dashboard-stats', async (req, res) => {
     try {
         const paidOrders = await Order.find({ paymentStatus: 'Đã thanh toán' });
@@ -326,7 +324,6 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
     }
 });
 
-// --- [API LẤY NHẬT KÝ TRUY CẬP GẦN ĐÂY] ---
 app.get('/api/admin/recent-activities', async (req, res) => {
     try {
         const activities = await UserActivity.find().sort({ createdAt: -1 }).limit(20);
@@ -336,7 +333,6 @@ app.get('/api/admin/recent-activities', async (req, res) => {
     }
 });
 
-// --- [API NÂNG CAO: THỐNG KÊ CHI TIẾT TÀI KHOẢN + ĐƠN ĐẶT/HỦY + TÍCH LŨY + PHÂN HẠNG CRM] ---
 app.get('/api/admin/customer-stats', async (req, res) => {
     try {
         const users = await User.find({}, '-password');
@@ -348,8 +344,9 @@ app.get('/api/admin/customer-stats', async (req, res) => {
             const paidOrders = await Order.find({ username: user.username, paymentStatus: 'Đã thanh toán' });
             const totalSpent = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-            let rank = "Thành viên Bạc";
-            if (totalSpent >= 1000000) rank = "Thành viên Vàng 🌟";
+            let rank = "Thành viên Đồng 🥉";
+            if (totalSpent >= 500000) rank = "Thành viên Bạc 🥈";
+            if (totalSpent >= 1500000) rank = "Thành viên Vàng 🥇";
             if (totalSpent >= 3000000) rank = "Thành viên Kim Cương 💎";
 
             return {
@@ -370,17 +367,14 @@ app.get('/api/admin/customer-stats', async (req, res) => {
     }
 });
 
-// --- [API GIÁM SÁT NHỊP ĐẬP TRẠNG THÁI TRỰC TUYẾN 30 GIÂY TIMEOUT] ---
 app.get('/api/admin/users-status', async (req, res) => {
     try {
         const users = await User.find({}, 'username fullName role isOnline lastActive');
-        
         const now = new Date();
         const timeoutLimit = 30 * 1000; 
 
         const updatedUsers = await Promise.all(users.map(async (user) => {
             const timeDiff = now - new Date(user.lastActive);
-
             if (user.isOnline && timeDiff > timeoutLimit) {
                 user.isOnline = false; 
                 await User.updateOne({ _id: user._id }, { isOnline: false }); 
@@ -402,7 +396,6 @@ app.get('/api/admin/users-status', async (req, res) => {
     }
 });
 
-// --- [API XÓA USER THEO USERNAME CHUẨN ĐOÁN DỰ ÁN] ---
 app.delete('/api/users/:username', async (req, res) => {
     try {
         const { username } = req.params;
@@ -420,29 +413,53 @@ app.delete('/api/users/:username', async (req, res) => {
     }
 });
 
-// --- [API QUẢN LÝ ĐƠN HÀNG ADMIN] ---
+// --- [API ĐÃ CẬP NHẬT: TRẢ VỀ ĐẦY ĐỦ PHƯƠNG THỨC THANH TOÁN VÀ THÔNG TIN CHI TIẾT ĐƠN HÀNG] ---
 app.get('/api/admin/orders', async (req, res) => {
     try {
-        const orders = await Order.find().sort({ createdAt: -1 });
+        const orders = await Order.find({}).sort({ createdAt: -1 });
         res.json(orders);
     } catch (error) {
         res.status(500).json({ error: "Không thể lấy danh sách đơn hàng!" });
     }
 });
 
+// --- [API ĐÃ CẬP NHẬT: ĐIỀU CHỈNH TRẠNG THÁI GIAO HÀNG ĐA DẠNG NÂNG CAO + CRM] ---
 app.put('/api/admin/orders/:id/update-status', async (req, res) => {
     try {
         const { id } = req.params;
         const { orderStatus, paymentStatus } = req.body; 
         
-        const updateData = {};
-        if (orderStatus) updateData.orderStatus = orderStatus;
-        if (paymentStatus) updateData.paymentStatus = paymentStatus;
-
-        const order = await Order.findByIdAndUpdate(id, updateData, { new: true });
-        if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hàng!" });
+        const order = await Order.findById(id);
+        if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hàng trên hệ thống!" });
         
-        res.json({ message: "Cập nhật dữ liệu trạng thái đơn hàng thành công!", order });
+        // Logic chặn State bảo vệ tính toàn vẹn của dữ liệu ERP
+        if (order.orderStatus === 'Hủy đơn' && orderStatus !== 'Hủy đơn') {
+            return res.status(400).json({ error: "Đơn hàng đã hủy bỏ, không thể chuyển đổi trạng thái!" });
+        }
+        if (order.orderStatus === 'Đã giao') {
+            return res.status(400).json({ error: "Đơn hàng đã hoàn tất giao hàng thành công, không cho phép chỉnh sửa!" });
+        }
+
+        // Tiến hành ghi nhận trạng thái mới từ Admin
+        if (orderStatus) order.orderStatus = orderStatus;
+        if (paymentStatus) order.paymentStatus = paymentStatus;
+
+        // Nếu chuyển sang trạng thái "Đã giao" -> Ép trạng thái tiền thành "Đã thanh toán" (Đặc biệt với đơn COD)
+        if (order.orderStatus === 'Đã giao') {
+            order.paymentStatus = 'Đã thanh toán';
+        }
+
+        await order.save();
+
+        // Ghi nhận lịch sử tương tác vào Activity Log cho Admin theo dõi
+        const adminLog = new UserActivity({
+            username: "Hệ thống Quản trị",
+            action: "Chỉnh sửa đơn hàng",
+            details: `Cập nhật đơn hàng ${order.orderCode} -> Vận chuyển: [${order.orderStatus}], Tiền hàng: [${order.paymentStatus}].`
+        });
+        await adminLog.save();
+        
+        res.json({ message: "Điều chỉnh thông tin và trạng thái đơn hàng thành công!", order });
     } catch (error) {
         res.status(500).json({ error: "Lỗi cập nhật trạng thái hệ thống!" });
     }
@@ -513,9 +530,7 @@ app.post('/api/webhook/payment', async (req, res) => {
             return res.status(400).json({ error: "Webhook thất bại: Không bốc được trường orderCode đối chiếu đơn!" });
         }
 
-        // ĐÃ SỬA TUYỆT ĐỐI: Tạo một biến chuỗi string sạch băm `.trim()` chống lệch khoảng cách ngân hàng
         const cleanOrderCode = String(orderCode).trim();
-
         const order = await Order.findOne({ orderCode: cleanOrderCode });
 
         if (!order) {
