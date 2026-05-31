@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 
-const app = express();
+const app = Web = express();
 app.use(express.json());
 app.use(cors()); // Cho phép Live Server hoặc Vercel gọi API không bị chặn
 
@@ -198,7 +198,8 @@ app.post('/api/orders', async (req, res) => {
     try {
         const { username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode } = req.body;
         
-        const initialPayStatus = 'Chờ thanh toán';
+        // Mẹo đồ án: Nếu khách chọn thanh toán bằng hình thức COD thì cho cờ paymentStatus là "Chờ thanh toán COD" luôn cho tường minh
+        const initialPayStatus = paymentMethod === 'COD' ? 'Chờ thanh toán COD' : 'Chờ thanh toán';
         const initialOrderStatus = 'Chờ xử lý';
 
         const newOrder = new Order({ 
@@ -241,6 +242,44 @@ app.put('/api/orders/:id/pay', async (req, res) => {
         res.json({ message: "Xác thực trạng thái thanh toán đơn hàng thành công!" });
     } catch (error) {
         res.status(500).json({ error: "Gặp lỗi trong quá trình cập nhật trạng thái đơn hàng!" });
+    }
+});
+
+// --- [API MỚI CẬP NHẬT: USER CHỦ ĐỘNG TỰ HỦY ĐƠN HÀNG TRÊN TRANG LỊCH SỬ] ---
+app.put('/api/orders/:id/cancel', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const order = await Order.findById(id);
+        
+        if (!order) {
+            return res.status(404).json({ error: "Đơn hàng yêu cầu xử lý hủy không tồn tại!" });
+        }
+
+        // RÀO CHẮN BẢO MẬT: Kiểm tra phương thức thanh toán
+        if (order.paymentMethod !== 'COD') {
+            return res.status(400).json({ error: "Hệ thống không hỗ trợ tự hủy đơn hàng QR Online. Vui lòng liên hệ Admin để xử lý hoàn tiền!" });
+        }
+
+        // RÀO CHẮN BẢO MẬT: Kiểm tra trạng thái đơn hàng vận chuyển
+        if (order.orderStatus !== 'Chờ xử lý') {
+            return res.status(400).json({ error: `Đơn hàng đã chuyển sang trạng thái [${order.orderStatus}], không thể tự hủy!` });
+        }
+
+        // Thực thi đổi trạng thái sang hủy đơn
+        order.orderStatus = 'Hủy đơn';
+        await order.save();
+
+        // Ghi nhật ký hoạt động
+        const cancelLog = new UserActivity({
+            username: order.username,
+            action: "Khách hủy đơn",
+            details: `User @${order.username} đã chủ động hủy hóa đơn COD mã ${order.orderCode} thành công.`
+        });
+        await cancelLog.save();
+
+        res.json({ message: "Hủy đơn hàng thành công!", order });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi máy chủ không thể xử lý tiến trình hủy đơn!" });
     }
 });
 
