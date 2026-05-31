@@ -66,11 +66,10 @@
 
             // 2. HÀM XỬ LÝ BIỂU DIỄN THẺ VIP THÀNH VIÊN
             function loadMembershipCard() {
-                // ĐÃ SỬA: Thay thế link sang biến API_URL động
                 fetch(`${API_URL}/api/admin/customer-stats`)
                 .then(res => res.json())
                 .then(stats => {
-                    const myStat = stats.find(stat => stat._id === currentUser.username);
+                    const myStat = stats.find(stat => stat.username === currentUser.username);
                     const totalSpent = myStat ? myStat.totalSpent : 0;
 
                     let tierName = "ĐỒNG 🥉";
@@ -128,9 +127,8 @@
                 .catch(err => console.error("Lỗi tải thông tin thành viên VIP:", err));
             }
 
-            // 3. HÀM TẢI LỊCH SỬ ĐƠN HÀNG CHI TIẾT
+            // 3. HÀM TẢI LỊCH SỬ ĐƠN HÀNG CHI TIẾT (ĐÃ ĐỒNG BỘ WEBHOOK ĐỘNG)
             function loadOrderHistory() {
-                // ĐÃ SỬA: Thay thế link sang biến API_URL động
                 fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                 .then(res => res.json())
                 .then(orders => {
@@ -150,27 +148,23 @@
                     }
 
                     orders.forEach(order => {
+                        // ĐÃ SỬA: Đọc chuẩn dữ liệu paymentStatus thực tế từ DB phục vụ luồng Webhook nhảy màu động
                         let finalPaymentStatus = order.paymentStatus; 
                         if (order.orderStatus === 'Hủy đơn') {
                             finalPaymentStatus = 'Thất bại';
-                        } else if (order.paymentMethod === 'COD') {
-                            if (order.orderStatus === 'Giao hàng thành công') {
-                                finalPaymentStatus = 'Đã thanh toán';
-                            } else {
-                                finalPaymentStatus = 'Chờ thanh toán';
-                            }
-                        } else if (order.paymentMethod === 'QR') {
-                            finalPaymentStatus = 'Đã thanh toán';
                         }
 
-                        let oStatusBadge = "bg-secondary";
-                        if (order.orderStatus === "Đang giao") oStatusBadge = "bg-warning text-dark";
-                        if (order.orderStatus === "Giao hàng thành công") oStatusBadge = "bg-success";
-                        if (order.orderStatus === "Hủy đơn") oStatusBadge = "bg-danger";
+                        // ĐÃ SỬA ĐỒNG BỘ MÀU SẮC BADGE THEO CHUẨN DOANH NGHIỆP
+                        // --- Phối màu Trạng thái đơn hàng (orderStatus) ---
+                        let oStatusBadge = "bg-secondary"; // Chờ xử lý (Màu xám)
+                        if (order.orderStatus === "Đang giao") oStatusBadge = "bg-primary text-white"; // Webhook duyệt tự động lên Xanh Dương cực VIP
+                        if (order.orderStatus === "Giao hàng thành công") oStatusBadge = "bg-success text-white"; // Xanh lá cây
+                        if (order.orderStatus === "Hủy đơn") oStatusBadge = "bg-danger text-white"; // Đỏ
 
-                        let pStatusBadge = "bg-danger";
-                        if (finalPaymentStatus === "Đã thanh toán") pStatusBadge = "bg-success";
-                        if (finalPaymentStatus === "Thất bại") pStatusBadge = "bg-dark";
+                        // --- Phối màu Tình trạng thanh toán (paymentStatus) ---
+                        let pStatusBadge = "bg-warning text-dark"; // Chờ thanh toán (Màu vàng)
+                        if (finalPaymentStatus === "Đã thanh toán") pStatusBadge = "bg-success text-white"; // Webhook nổ tiền tự chuyển Xanh Lá Cây lập tức
+                        if (finalPaymentStatus === "Thất bại") pStatusBadge = "bg-dark text-white"; // Đen u ám
 
                         let itemsHtml = order.items.map(item => `
                             <div class="d-flex justify-content-between align-items-center mb-2 small pb-1 border-bottom border-light">

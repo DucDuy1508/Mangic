@@ -144,7 +144,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // TỰ ĐỘNG NHẬN DIỆN MÔI TRƯỜNG: Chạy máy nhà dùng localhost, lên Vercel tự động tìm đến Render
             const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
                 ? "http://localhost:5000"
                 : "https://mangic.onrender.com";
@@ -164,11 +163,11 @@
             let membershipTierName = "Thành viên Đồng";
             let appliedCode = "";
             let currentOrderId = "";
+            let paymentCheckInterval = null; // Quản lý vòng lặp quét ngầm Webhook
 
             const orderCode = "MGC" + Math.floor(100000 + Math.random() * 900000);
             document.getElementById("txtOrderCode").innerText = orderCode;
 
-            // Tự động kiểm tra chi tiêu để tính hạng thành viên và giảm giá thêm qua API_URL động
             fetch(`${API_URL}/api/admin/customer-stats`)
             .then(res => res.json())
             .then(stats => {
@@ -206,7 +205,6 @@
 
             function updatePriceUI() {
                 memberDiscountAmount = Math.round(originalTotal * (membershipDiscountPercent / 100));
-                
                 finalTotal = originalTotal - discountAmount - memberDiscountAmount;
                 if (finalTotal < 0) finalTotal = 0;
 
@@ -222,7 +220,6 @@
                 document.getElementById("qrcodeImg").src = qrUrl;
             }
 
-            // Áp dụng mã giảm giá bốc từ database MongoDB qua API_URL động
             document.getElementById("btnApplyCoupon").addEventListener("click", function() {
                 const code = document.getElementById("couponInput").value.trim().toUpperCase();
                 const msg = document.getElementById("couponMessage");
@@ -281,7 +278,6 @@
                 });
             });
 
-            // Tiến hành lưu đơn hàng qua API_URL động
             document.getElementById("btnSubmitOrder").addEventListener("click", function() {
                 const name = document.getElementById("shipName").value.trim();
                 const phone = document.getElementById("shipPhone").value.trim();
@@ -327,11 +323,40 @@
                         document.getElementById("shipAddress").disabled = true;
                         document.getElementById("btnSubmitOrder").disabled = true;
                         Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất chuyển khoản!', 'info');
+                        
+                        // KÍCH HOẠT QUÉT NGẦM REALTIME WEBHOOK: Cứ 4 giây tự gọi kiểm tra trạng thái thanh toán đơn
+                        startRealtimePaymentCheck();
                     }
                 });
             });
 
-            // Xác nhận thanh toán trực tiếp lên Render qua API_URL động
+            // Hàm tự động quét ngầm kiểm tra đơn xem Webhook đã chuyển thành "Đã thanh toán" chưa
+            function startRealtimePaymentCheck() {
+                if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+                
+                paymentCheckInterval = setInterval(() => {
+                    fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
+                    .then(res => res.json())
+                    .then(orders => {
+                        const myCurrentOrder = orders.find(o => o.orderCode === orderCode);
+                        if (myCurrentOrder && myCurrentOrder.paymentStatus === 'Đã thanh toán') {
+                            clearInterval(paymentCheckInterval); // Tìm thấy rồi thì tắt quét ngầm
+                            clearInterval(countdownInterval); // Tắt đồng hồ đếm ngược 15 phút
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thanh toán tự động thành công!',
+                                text: 'Hệ thống đã nhận diện biến động số dư qua Webhook SePay thực tế!',
+                                confirmButtonColor: '#198754'
+                            }).then(() => {
+                                clearCartAndRedirect();
+                            });
+                        }
+                    }).catch(err => console.log("Lỗi quét ngầm cổng thanh toán..."));
+                }, 4000); // 4 giây quét nhịp một lần
+            }
+
+            // Xác nhận thanh toán thủ công (Nút bấm dự phòng khi đi demo)
             document.getElementById("btnConfirmPayment").addEventListener("click", function() {
                 if (!currentOrderId) {
                     Swal.fire('Thông báo', 'Vui lòng nhập thông tin nhận hàng và bấm nút Hoàn tất đặt hàng trước!', 'warning');
@@ -340,7 +365,7 @@
 
                 Swal.fire({
                     title: 'Đang xác thực',
-                    text: 'Hệ thống đang kiểm tra số dư tài khoản...',
+                    text: 'Hệ thống đang kiểm tra số dư tài khoản ngân hàng...',
                     allowOutsideClick: false,
                     didOpen: () => { Swal.showLoading(); }
                 });
@@ -349,10 +374,11 @@
                     fetch(`${API_URL}/api/orders/${currentOrderId}/pay`, { method: 'PUT' })
                     .then(res => res.json())
                     .then(data => {
+                        if (paymentCheckInterval) clearInterval(paymentCheckInterval);
                         clearInterval(countdownInterval);
                         Swal.fire({
                             icon: 'success',
-                            title: 'Thanh toán thành công!',
+                            title: 'Xác thực thành công!',
                             text: 'Mangic Shop đã nhận được tiền đơn hàng của bạn.',
                             confirmButtonColor: '#198754'
                         }).then(() => {
@@ -370,6 +396,7 @@
                 timerSpan.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
                 if (timeRemaining <= 0) {
                     clearInterval(countdownInterval);
+                    if (paymentCheckInterval) clearInterval(paymentCheckInterval);
                     Swal.fire('Hết giờ', 'Đơn hàng quá hạn đã tự động hủy.', 'error').then(() => {
                         window.location.href = "index.html";
                     });
@@ -390,12 +417,12 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         clearInterval(countdownInterval);
+                        if (paymentCheckInterval) clearInterval(paymentCheckInterval);
                         window.location.href = "index.html";
                     }
                 });
             });
 
-            // Hàm chốt đơn tự động khấu trừ lượt dùng Coupon trên MongoDB Atlas qua API_URL động
             function clearCartAndRedirect() {
                 if (appliedCode) {
                     fetch(`${API_URL}/api/admin/coupons/use`, {
