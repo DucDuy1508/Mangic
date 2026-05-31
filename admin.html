@@ -3,182 +3,549 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Trị Mangic Shop - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
+    <!-- Nhúng thư viện Chart.js để vẽ biểu đồ siêu ngầu -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Mangic Admin - Hệ Thống Điều Hành</title>
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --primary-dark: #1e1e2d;
+            --accent-color: #ffbc00;
+        }
+        body { background-color: #f4f5f7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        
+        /* Sidebar Mục lục bên trái */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            background-color: var(--primary-dark);
+            color: #a2a3b7;
+            z-index: 100;
+            padding-top: 20px;
+        }
+        .sidebar-logo { padding: 10px 25px; border-bottom: 1px solid #2b2b40; margin-bottom: 20px; }
+        .sidebar-logo h4 { color: white; font-weight: 700; letter-spacing: 1px; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu li a {
+            display: flex;
+            align-items: center;
+            padding: 14px 25px;
+            color: #a2a3b7;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .sidebar-menu li a i { margin-right: 12px; font-size: 16px; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active {
+            color: white;
+            background-color: #1b1b28;
+            border-left: 4px solid var(--accent-color);
+        }
+        .logout-item { border-top: 1px solid #2b2b40; margin-top: 30px; }
+
+        /* Vùng hiển thị bên phải */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        .card-stat { border: none; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .table-wrapper, .chart-wrapper { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 30px; }
+        .status-badge { width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 6px; }
+        .status-online { background-color: #2ec4b6; box-shadow: 0 0 8px #2ec4b6; }
+        .status-offline { background-color: #cbd5e1; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-dark bg-dark shadow mb-4">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold fs-4" href="#"><i class="ti ti-shield me-2 text-warning"></i>MANGIC - ADMIN PANEL</a>
-            <span id="adminName" class="text-light me-3 small d-none d-md-inline"></span>
-            <button id="btnLogoutAdmin" class="btn btn-sm btn-danger fw-bold"><i class="ti ti-power-off me-1"></i> Đăng Xuất</button>
+    <!-- ========================================== -->
+    <!-- SIDEBAR - MỤC LỤC BÊN TRÁI                    -->
+    <!-- ========================================== -->
+    <div id="sidebar">
+        <div class="sidebar-logo">
+            <h4>MANGIC ADMIN</h4>
         </div>
-    </nav>
-
-    <div class="container-fluid px-4 my-4">
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm p-3 bg-white border-start border-primary border-4">
-                    <span class="text-muted small fw-bold">TỔNG DOANH THU</span>
-                    <h3 class="fw-bold text-primary mt-1" id="dashRevenue">0 đ</h3>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm p-3 bg-white border-start border-success border-4">
-                    <span class="text-muted small fw-bold">TỔNG SỐ ĐƠN HÀNG</span>
-                    <h3 class="fw-bold text-success mt-1" id="dashOrdersCount">0 đơn</h3>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm p-3 bg-white border-start border-warning border-4">
-                    <span class="text-muted small fw-bold">KHÁCH HÀNG HOẠT ĐỘNG</span>
-                    <h3 class="fw-bold text-warning mt-1" id="dashCustomersCount">0 người</h3>
-                </div>
-            </div>
-        </div>
-
-        <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold text-dark" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel" type="button" role="tab"><i class="ti ti-receipt me-1"></i> Quản Lý Đơn Hàng & Lịch Sử</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-dark" id="customers-tab" data-bs-toggle="tab" data-bs-target="#customers-panel" type="button" role="tab"><i class="ti ti-user me-1"></i> Thống Kê Khách Hàng</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-dark" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-panel" type="button" role="tab"><i class="ti ti-id-badge me-1"></i> Quản Lý Danh Sách Tài Khoản</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-dark" id="coupons-tab" data-bs-toggle="tab" data-bs-target="#coupons-panel" type="button" role="tab"><i class="ti ti-ticket me-1"></i> Quản Lý Coupon</button>
+        <ul class="sidebar-menu">
+            <li><a onclick="switchTab('section-dashboard')" id="btn-section-dashboard" class="active"><i class="ti ti-dashboard"></i>Báo cáo & Tổng quan</a></li>
+            <li><a onclick="switchTab('section-orders')" id="btn-section-orders"><i class="ti ti-shopping-cart"></i>Quản lý đơn hàng</a></li>
+            <li><a onclick="switchTab('section-coupons')" id="btn-section-coupons"><i class="ti ti-ticket"></i>Quản lý Coupon</a></li>
+            <li><a onclick="switchTab('section-users')" id="btn-section-users"><i class="ti ti-pulse"></i>Giám sát tài khoản</a></li>
+            
+            <!-- ĐÃ ĐỔI: Nút quay lại thành nút ĐĂNG XUẤT tối cao -->
+            <li class="logout-item">
+                <a onclick="handleAdminLogout()" class="text-danger fw-bold"><i class="ti ti-power-off text-danger"></i>Đăng xuất hệ thống</a>
             </li>
         </ul>
+    </div>
 
-        <div class="tab-content" id="adminTabContent">
-            <div class="tab-pane fade show active" id="orders-panel" role="tabpanel" aria-labelledby="orders-tab">
-                <div class="card border-0 shadow-sm p-4 bg-white">
-                    <h5 class="fw-bold text-dark mb-3">DANH SÁCH ĐƠN HÀNG TOÀN HỆ THỐNG</h5>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle" style="font-size: 14px;">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Mã Đơn</th>
-                                    <th>Tài Khoản</th>
-                                    <th>Thông Tin Nhận Hàng</th>
-                                    <th>Chi Tiết Truyện</th>
-                                    <th>Tổng Tiền</th>
-                                    <th>PTTT</th>
-                                    <th>Trạng Thái Đơn Hàng</th>
-                                    <th>Trạng Thái Thanh Toán</th>
-                                </tr>
-                            </tbody>
-                            <tbody id="tblOrdersBody"></tbody>
-                        </table>
-                    </div>
+    <!-- ========================================== -->
+    <!-- MAIN CONTENT - VÙNG HIỂN THỊ ĐỘNG BÊN PHẢI   -->
+    <!-- ========================================== -->
+    <div id="main-content">
+        
+        <!-- TAB 1: BÁO CÁO & TỔNG QUAN (CÓ BIỂU ĐỒ) -->
+        <div id="section-dashboard" class="content-section active">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold text-dark">Trung Tâm Điều Hành Realtime</h3>
+                    <p class="text-muted small">Hệ thống phân tích kinh doanh trực quan.</p>
                 </div>
+                <button class="btn btn-dark fw-bold btn-sm" onclick="loadDashboardData()"><i class="ti ti-reload me-1"></i> Refresh dữ liệu</button>
             </div>
-
-            <div class="tab-pane fade" id="customers-panel" role="tabpanel" aria-labelledby="customers-tab">
-                <div class="card border-0 shadow-sm p-4 bg-white">
-                    <h5 class="fw-bold text-dark mb-3">XẾP HẠNG MUA SẮM CỦA KHÁCH HÀNG</h5>
-                    <div class="table-responsive" style="max-width: 900px;">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Tên Tài Khoản Khách</th>
-                                    <th class="text-center">Hạng Thành Viên</th> 
-                                    <th class="text-center text-success">Đơn Đã Đặt</th>
-                                    <th class="text-center text-danger">Đơn Đã Hủy</th>
-                                    <th>Tổng Giá Trị Tích Lũy</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tblCustomersBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="users-panel" role="tabpanel" aria-labelledby="users-tab">
-                <div class="card border-0 shadow-sm p-4 bg-white">
-                    <h5 class="fw-bold text-dark mb-3">DANH SÁCH TÀI KHOẢN TRÊN HỆ THỐNG</h5>
-                    <div class="table-responsive" style="max-width: 900px;">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Tài Khoản (Username)</th>
-                                    <th>Họ Và Tên</th>
-                                    <th>Vai Trò (Role)</th>
-                                    <th class="text-center">Hành Động</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tblUsersListBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="coupons-panel" role="tabpanel" aria-labelledby="coupons-tab">
-                <div class="row g-4">
-                    <div class="col-lg-4">
-                        <div class="card border-0 shadow-sm p-4 bg-white">
-                            <h5 class="fw-bold text-dark mb-3">TẠO MÃ GIẢM GIÁ MỚI</h5>
-                            <form id="couponForm">
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Mã Coupon</label>
-                                    <input type="text" id="cpCode" class="form-control" placeholder="Ví dụ: MANGIC20" required>
-                                </div>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <label class="form-label small fw-bold">% Giảm giá</label>
-                                        <input type="number" id="cpDiscount" class="form-control" min="1" max="100" required>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label small fw-bold">Số lượng mã</label>
-                                        <input type="number" id="cpLimit" class="form-control" min="1" required>
-                                    </div>
-                                </div>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <label class="form-label small fw-bold">Ngày bắt đầu</label>
-                                        <input type="date" id="cpStart" class="form-control">
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label small fw-bold">Ngày kết thúc</label>
-                                        <input type="date" id="cpEnd" class="form-control">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-dark w-100 fw-bold">TẠO COUPON</button>
-                            </form>
+            
+            <!-- 4 Khối số liệu tổng -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card-stat p-4 bg-dark shadow">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1 text-uppercase small text-white-50">Tổng doanh thu</p>
+                                <h3 class="fw-bold mb-0 text-warning" id="stat-revenue">0 VND</h3>
+                            </div>
+                            <i class="ti ti-money-cap fs-2 text-white-50"></i>
                         </div>
                     </div>
-                    <div class="col-lg-8">
-                        <div class="card border-0 shadow-sm p-4 bg-white">
-                            <h5 class="fw-bold text-dark mb-3">DANH SÁCH MÃ ĐANG CÓ</h5>
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle" style="font-size: 13px;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Mã</th>
-                                            <th>Giảm</th>
-                                            <th>Áp dụng</th>
-                                            <th>Đã dùng</th>
-                                            <th>Hết hạn</th>
-                                            <th class="text-center">Xóa</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="couponTableBody"></tbody>
-                                </table>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card-stat p-4 bg-primary shadow">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1 text-uppercase small text-white-50">Traffic (Visits)</p>
+                                <h3 class="fw-bold mb-0" id="stat-visits">0 lượt</h3>
+                            </div>
+                            <i class="ti ti-bar-chart fs-2 text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card-stat p-4 bg-success shadow">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1 text-uppercase small text-white-50">Tổng Clicks</p>
+                                <h3 class="fw-bold mb-0" id="stat-clicks">0 click</h3>
+                            </div>
+                            <i class="ti ti-mouse fs-2 text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card-stat p-4 bg-info shadow">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1 text-uppercase small text-white-50">Tài khoản Online</p>
+                                <h3 class="fw-bold mb-0" id="stat-online">0 trực tuyến</h3>
+                            </div>
+                            <i class="ti ti-user fs-2 text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THÊM MỚI: PHÂN VÙNG BIỂU ĐỒ BÁO CÁO ĐỒ THỊ -->
+            <div class="row mb-4">
+                <div class="col-lg-8">
+                    <div class="chart-wrapper">
+                        <h5 class="fw-bold text-dark mb-4"><i class="ti ti-stats-up text-primary me-2"></i>Thống kê tương tác Traffic vs Clicks</h5>
+                        <div style="position: relative; height:280px;">
+                            <canvas id="analyticsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="chart-wrapper">
+                        <h5 class="fw-bold text-dark mb-4"><i class="ti ti-pie-chart text-success me-2"></i>Tỷ lệ trạng thái tài khoản</h5>
+                        <div style="position: relative; height:280px; display: flex; justify-content: center;">
+                            <canvas id="userPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nhật ký hoạt động -->
+            <div class="table-wrapper">
+                <h5 class="fw-bold mb-4 text-dark"><i class="ti ti-time me-1 text-primary"></i> Nhật ký hoạt động gần đây</h5>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tài khoản</th>
+                                <th>Hành động</th>
+                                <th>Chi tiết tương tác</th>
+                                <th>Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-activities"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: QUẢN LÝ ĐƠN HÀNG -->
+        <div id="section-orders" class="content-section">
+            <h3 class="fw-bold text-dark mb-4">Hệ Thống Đơn Hàng Mua Sắm</h3>
+            <div class="table-wrapper">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã Đơn Hàng</th>
+                                <th>Khách Hàng</th>
+                                <th>Tổng Tiền</th>
+                                <th>Thanh Toán</th>
+                                <th>Trạng Thái Đơn</th>
+                                <th>Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-orders"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: QUẢN LÝ COUPON -->
+        <div id="section-coupons" class="content-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold text-dark">Quản Lý Mã Giảm Giá (Coupon)</h3>
+                <button class="btn btn-warning fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#addCouponModal"><i class="ti ti-plus me-1"></i> Tạo Coupon Mới</button>
+            </div>
+            <div class="table-wrapper">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã Code</th>
+                                <th>Mức Giảm (%)</th>
+                                <th>Hạn Sử Dụng</th>
+                                <th>Giới Hạn / Đã Dùng</th>
+                                <th>Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-coupons"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: GIÁM SÁT TÀI KHOẢN -->
+        <div id="section-users" class="content-section">
+            <h3 class="fw-bold text-dark mb-4">Giám Sát Phiên Hoạt Động Của Người Dùng</h3>
+            <div class="table-wrapper">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Họ Tên / Username</th>
+                                <th>Vai trò</th>
+                                <th>Trạng Thái Online</th>
+                                <th>Thao Tác Hệ Thống</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-users-status"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL TẠO COUPON ĐÃ SỬA: CÓ SET NGÀY HẠN DÙNG -->
+    <!-- ========================================== -->
+    <div class="modal fade" id="addCouponModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">Tạo Mã Giảm Giá Độc Quyền</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-create-coupon">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Mã Code (Ví dụ: MANGIC20)</label>
+                            <input type="text" id="cp-code" class="form-control" required placeholder="Nhập mã chữ viết hoa...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Phần trăm giảm giá (%)</label>
+                            <input type="number" id="cp-percent" class="form-control" min="1" max="100" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Tổng số lượt phát hành tối đa</label>
+                            <input type="number" id="cp-limit" class="form-control" min="1" required>
+                        </div>
+                        
+                        <!-- ĐÃ THÊM: Ô Chọn ngày bắt đầu và ngày hết hạn cực chuẩn -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small">Ngày bắt đầu áp dụng</label>
+                                <input type="date" id="cp-startdate" class="form-control" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small">Ngày hết hạn mã</label>
+                                <input type="date" id="cp-enddate" class="form-control" required>
                             </div>
                         </div>
-                    </div>
+
+                        <button type="button" class="btn btn-dark w-100 fw-bold mt-2" onclick="createNewCoupon()">Kích Hoạt Coupon</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT XỬ LÝ LOGIC ĐỘNG VÀ BIỂU ĐỒ      -->
+    <!-- ========================================== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="./assets/Js/data.js"></script>
-    <script src="./assets/Js/admin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
+
+        // Khai báo biến lưu trữ instance của biểu đồ để tránh lỗi đè canvas
+        let analyticsChartInstance = null;
+        let userPieChartInstance = null;
+
+        // Điền sẵn ngày hôm nay vào ô Coupon Date để admin Duy đỡ mất công nhập lại
+        document.getElementById('cp-startdate').value = new Date().toISOString().split('T')[0];
+
+        // Chuyển đổi qua lại giữa các menu mục lục
+        function switchTab(sectionId) {
+            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.sidebar-menu li a').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(sectionId).classList.add('active');
+            document.getElementById('btn-' + sectionId).classList.add('active');
+
+            if (sectionId === 'section-dashboard') loadDashboardData();
+            if (sectionId === 'section-orders') loadOrdersData();
+            if (sectionId === 'section-coupons') loadCouponsData();
+            if (sectionId === 'section-users') loadUsersStatusData();
+        }
+
+        // --- TAB 1: BÁO CÁO & VẼ BIỂU ĐỒ ---
+        function loadDashboardData() {
+            fetch(`${API_BASE}/api/admin/dashboard-stats`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('stat-revenue').innerText = Number(data.totalRevenue).toLocaleString('vi-VN') + " VND";
+                    document.getElementById('stat-visits').innerText = data.totalVisits + " lượt";
+                    document.getElementById('stat-clicks').innerText = data.totalClicks + " click";
+                    document.getElementById('stat-online').innerText = data.onlineUsersCount + " Trực tuyến";
+
+                    // Vẽ biểu đồ Cột kết hợp Đường (Traffic vs Clicks)
+                    initAnalyticsChart(data.totalVisits, data.totalClicks);
+                });
+
+            fetch(`${API_BASE}/api/admin/recent-activities`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('table-activities').innerHTML = data.map(act => `
+                        <tr>
+                            <td class="fw-bold text-secondary">@${act.username}</td>
+                            <td><span class="badge ${act.action.includes('Truy cập') ? 'bg-primary' : 'bg-secondary'}">${act.action}</span></td>
+                            <td class="small text-muted">${act.details}</td>
+                            <td class="small text-muted">${new Date(act.createdAt).toLocaleTimeString('vi-VN')}</td>
+                        </tr>
+                    `).join('');
+                });
+
+            // Tiện tay quét số lượng tài khoản online/offline để vẽ biểu đồ tròn bên cạnh
+            fetch(`${API_BASE}/api/admin/users-status`)
+                .then(res => res.json())
+                .then(users => {
+                    const onlineCount = users.filter(u => u.isOnline).length;
+                    const offlineCount = users.length - onlineCount;
+                    initUserPieChart(onlineCount, offlineCount);
+                });
+        }
+
+        // Hàm vẽ Biểu đồ kết hợp cột và đường
+        function initAnalyticsChart(visits, clicks) {
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            if (analyticsChartInstance) analyticsChartInstance.destroy(); // Xóa biểu đồ cũ để nạp số liệu mới
+
+            analyticsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Hệ thống Mangic Shop tổng quan'],
+                    datasets: [
+                        { label: 'Lượt xem trang (Visits)', data: [visits], backgroundColor: '#0d6efd', borderRadius: 8 },
+                        { label: 'Hành vi Click chuột', data: [clicks], type: 'line', borderColor: '#2ec4b6', backgroundColor: '#2ec4b6', tension: 0.4, fill: false }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // Hàm vẽ Biểu đồ tròn thể hiện tỷ lệ On/Off của tài khoản
+        function initUserPieChart(online, offline) {
+            const ctx = document.getElementById('userPieChart').getContext('2d');
+            if (userPieChartInstance) userPieChartInstance.destroy();
+
+            userPieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Online', 'Offline'],
+                    datasets: [{ data: [online, offline], backgroundColor: ['#2ec4b6', '#cbd5e1'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- TAB 2: ĐƠN HÀNG ---
+        function loadOrdersData() {
+            fetch(`${API_BASE}/api/admin/orders`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('table-orders').innerHTML = data.map(order => `
+                        <tr>
+                            <td class="fw-bold text-primary">${order.orderCode}</td>
+                            <td>
+                                <div class="fw-bold">${order.shippingInfo.fullName}</div>
+                                <div class="small text-muted">${order.shippingInfo.phone}</div>
+                            </td>
+                            <td class="fw-bold text-danger">${Number(order.totalAmount).toLocaleString()}đ</td>
+                            <td><span class="badge ${order.paymentStatus === 'Đã thanh toán' ? 'bg-success' : 'bg-warning'}">${order.paymentStatus}</span></td>
+                            <td><span class="badge bg-dark">${order.orderStatus}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-dark fw-bold" onclick="updateOrderStatus('${order._id}', 'Đang giao')">Duyệt đi giao</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        function updateOrderStatus(id, status) {
+            fetch(`${API_BASE}/api/admin/orders/${id}/update-status`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderStatus: status })
+            }).then(() => {
+                Swal.fire('Thành công', 'Đã chuyển trạng thái đơn hàng!', 'success');
+                loadOrdersData();
+            });
+        }
+
+        // --- TAB 3: QUẢN LÝ COUPON CÓ DATE ---
+        function loadCouponsData() {
+            fetch(`${API_BASE}/api/admin/coupons`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('table-coupons').innerHTML = data.map(cp => {
+                        const hetHan = cp.endDate ? new Date(cp.endDate).toLocaleDateString('vi-VN') : 'Vô hạn';
+                        return `
+                            <tr>
+                                <td class="fw-bold text-success">${cp.code}</td>
+                                <td class="fw-bold">Giảm ${cp.discountPercent}%</td>
+                                <td class="small text-muted">${hetHan}</td>
+                                <td>${cp.usedCount} / ${cp.usageLimit} lượt</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCoupon('${cp._id}')"><i class="ti ti-trash"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                });
+        }
+
+        function createNewCoupon() {
+            const code = document.getElementById('cp-code').value.toUpperCase().trim();
+            const discountPercent = Number(document.getElementById('cp-percent').value);
+            const usageLimit = Number(document.getElementById('cp-limit').value);
+            const startDate = document.getElementById('cp-startdate').value;
+            const endDate = document.getElementById('cp-enddate').value;
+
+            fetch(`${API_BASE}/api/admin/coupons`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code, discountPercent, usageLimit, startDate, endDate })
+            }).then(res => {
+                if(!res.ok) throw new Error();
+                Swal.fire('Thành công', 'Đã kích hoạt mã ' + code, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('addCouponModal')).hide();
+                document.getElementById('form-create-coupon').reset();
+                loadCouponsData();
+            }).catch(() => Swal.fire('Thất bại', 'Mã giảm giá này đã tồn tại!', 'error'));
+        }
+
+        function deleteCoupon(id) {
+            fetch(`${API_BASE}/api/admin/coupons/${id}`, { method: "DELETE" }).then(() => {
+                Swal.fire('Đã xóa', 'Gỡ mã giảm giá thành công.', 'success');
+                loadCouponsData();
+            });
+        }
+
+        // --- TAB 4: GIÁM SÁT TÀI KHOẢN ---
+        function loadUsersStatusData() {
+            fetch(`${API_BASE}/api/admin/users-status`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('table-users-status').innerHTML = data.map(user => `
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
+                                <div class="small text-muted">@${user.username}</div>
+                            </td>
+                            <td><span class="badge bg-secondary">${user.role}</span></td>
+                            <td>
+                                <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
+                                <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
+                                    ${user.isOnline ? 'Online' : 'Offline'}
+                                </span>
+                            </td>
+                            <td class="small text-muted">${user.isOnline ? 'Đang thao tác' : 'Thoát lúc: ' + new Date(user.lastActive).toLocaleTimeString('vi-VN')}</td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        // --- ĐÃ THÊM: HÀM ĐĂNG XUẤT CHO ADMIN ---
+        function handleAdminLogout() {
+            Swal.fire({
+                title: 'Xác nhận đăng xuất?',
+                text: "Bạn sẽ thoát khỏi hệ thống quản trị tối cao của Mangic Shop.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#1e1e2d',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Đăng xuất',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const user = JSON.parse(localStorage.getItem("currentUser"));
+                    
+                    // Gửi tín hiệu báo ngoại tuyến lên Render
+                    if (user) {
+                        fetch(`${API_BASE}/api/auth/logout-status`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ username: user.username })
+                        });
+                    }
+
+                    // Xóa phiên làm việc và đá ra trang login client
+                    localStorage.removeItem("currentUser");
+                    window.location.href = "../dangnhap.html";
+                }
+            });
+        }
+
+        // Tự động kích hoạt khi mở trang và lặp lại liên tục sau mỗi 10 giây
+        document.addEventListener("DOMContentLoaded", function() {
+            loadDashboardData();
+            setInterval(() => {
+                const activeSection = document.querySelector('.content-section.active').id;
+                if (activeSection === 'section-dashboard') loadDashboardData();
+                if (activeSection === 'section-users') loadUsersStatusData();
+            }, 10000); 
+        });
+    </script>
 </body>
 </html>

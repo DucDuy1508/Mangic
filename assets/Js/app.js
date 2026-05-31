@@ -257,3 +257,55 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+// ==========================================
+// TỰ ĐỘNG HÓA ANALYTICS: THEO DÕI VISITS VÀ CLICKS CHO ADMIN
+// ==========================================
+(function() {
+    const user = JSON.parse(localStorage.getItem("currentUser"));
+    const currentUsername = user ? user.username : "Khách vãng lai";
+
+    // 1. Tự động ghi nhận lượt truy cập khi trang này được tải xong
+    fetch(`${API_URL}/api/analytics/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            type: "visit",
+            username: currentUsername,
+            details: `Xem trang: ${window.location.pathname.split('/').pop() || 'Trang chủ'}`
+        })
+    }).catch(err => console.log("Lỗi gửi track visit"));
+
+    // 2. Tự động lắng nghe và đếm mọi click chuột trên giao diện hệ thống
+    document.addEventListener("click", function(e) {
+        // Chỉ đếm các cụm click vào các phần tử quan trọng như nút, link thẻ a, thẻ i icon, ảnh sản phẩm
+        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.product-card') || e.target.closest('i')) {
+            let targetText = e.target.innerText || e.target.className || "Nút chức năng";
+            if (targetText.length > 50) targetText = targetText.substring(0, 50) + "...";
+
+            fetch(`${API_URL}/api/analytics/track`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: "click",
+                    username: currentUsername,
+                    details: `Click vào: ${targetText.trim()}`
+                })
+            }).catch(err => console.log("Lỗi gửi track click"));
+        }
+    });
+})();
+
+// CẬP NHẬT THÊM: Sửa lại chức năng Đăng xuất cũ của ông để gửi tín hiệu Offline lên server
+// Ông tìm sự kiện click của nút 'btnLogout' cũ trong app.js, chèn thêm cái fetch này vào trước khi xóa localStorage nha:
+if (btnLogout) {
+    // Đoạn code xử lý Swall.fire của ông giữ nguyên...
+    // Lúc mà chuẩn bị xóa localStorage.removeItem("currentUser"), chèn dòng này:
+    const user = JSON.parse(localStorage.getItem("currentUser"));
+    if (user) {
+        fetch(`${API_URL}/api/auth/logout-status`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: user.username })
+        });
+    }
+}

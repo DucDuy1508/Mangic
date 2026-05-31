@@ -17,13 +17,15 @@ mongoose.connect(mongoURI)
     .catch(err => console.log("Lỗi kết nối DB:", err));
 
 // ==========================================
-// 2. ĐỊNH NGHĨA CẤU TRÚC BẢNG TÀI KHOẢN (USER)
+// 2. ĐỊNH NGHĨA CẤU TRÚC BẢNG TÀI KHOẢN (USER) - THÊM CỘT TRACKING ONLINE
 // ==========================================
 const UserSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, required: true },
-    fullName: String
+    fullName: String,
+    isOnline: { type: Boolean, default: false },       // Thêm mới: Tình trạng online
+    lastActive: { type: Date, default: Date.now }       // Thêm mới: Thời gian tương tác cuối cùng
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -31,7 +33,6 @@ const User = mongoose.model('User', UserSchema);
 // 3. ĐỊNH NGHĨA CẤU TRÚC BẢNG SẢN PHẨM (PRODUCT)
 // ==========================================
 const ProductSchema = new mongoose.Schema({
-    // Đổi kiểu dữ liệu _id thành String để nạp được mọi loại ID tự chế lẫn ID mặc định
     _id: { type: String, required: true }, 
     name: { type: String, required: true },
     price: { type: Number, required: true },
@@ -82,9 +83,30 @@ const CouponSchema = new mongoose.Schema({
 });
 const Coupon = mongoose.model('Coupon', CouponSchema);
 
+// ==========================================
+// THÊM MỚI: ĐỊNH NGHĨA CẤU TRÚC BẢNG THEO DÕI TRAFFIC & CLICKS
+// ==========================================
+const TrafficSchema = new mongoose.Schema({
+    date: { type: String, required: true, unique: true }, // Định dạng ngày "YYYY-MM-DD"
+    visits: { type: Number, default: 0 },
+    clicks: { type: Number, default: 0 }
+});
+const Traffic = mongoose.model('Traffic', TrafficSchema);
 
 // ==========================================
-// 6. HỆ THỐNG CÁC API XỬ LÝ SẢN PHẨM (ĐÃ SỬA: CHẤP NHẬN ID TỰ CHẾ)
+// THÊM MỚI: ĐỊNH NGHĨA CẤU TRÚC NHẬT KÝ TRUY CẬP (ACTIVITY LOG)
+// ==========================================
+const UserActivitySchema = new mongoose.Schema({
+    username: { type: String, default: "Khách vãng lai" },
+    action: { type: String, required: true },             // Ví dụ: "Truy cập hệ thống", "Click sản phẩm"
+    details: String,                                      // Chi tiết hành động thực tế
+    createdAt: { type: Date, default: Date.now }
+});
+const UserActivity = mongoose.model('UserActivity', UserActivitySchema);
+
+
+// ==========================================
+// 6. HỆ THỐNG CÁC API XỬ LÝ SẢN PHẨM (CHẤP NHẬN ID TỰ CHẾ)
 // ==========================================
 
 // --- [API LẤY TOÀN BỘ SẢN PHẨM] ---
@@ -103,7 +125,6 @@ app.get('/api/products/:id', async (req, res) => {
         const { id } = req.params;
         console.log(">>> [LOG BACKEND] Thiết bị đang yêu cầu bốc dữ liệu ID truyện:", id);
 
-        // ĐÃ SỬA: Bỏ hàm check isValid của Mongoose để chấp nhận chuỗi tự chế "a000..." của ông
         const product = await Product.findById(id);
         
         if (!product) {
@@ -121,7 +142,7 @@ app.get('/api/products/:id', async (req, res) => {
 
 
 // ==========================================
-// 7. HỆ THỐNG CÁC API XỬ XỬ LÝ CHO KHÁCH HÀNG (CLIENT)
+// 7. HỆ THỐNG CÁC API XỬ LÝ CHO KHÁCH HÀNG (CLIENT)
 // ==========================================
 
 app.post('/api/register', async (req, res) => {
@@ -149,6 +170,11 @@ app.post('/api/login', async (req, res) => {
     if (!isMatch) {
         return res.status(400).json({ error: "Mật khẩu không chính xác. Vui lòng kiểm tra lại." });
     }
+
+    // CẬP NHẬT: Đăng nhập thành công thì chuyển trạng thái thành Online tức thì
+    user.isOnline = true;
+    user.lastActive = new Date();
+    await user.save();
 
     res.json({
         message: "Đăng nhập thành công!",
@@ -215,8 +241,112 @@ app.put('/api/orders/:id/pay', async (req, res) => {
 
 
 // ==========================================
+// THÊM MỚI: CÁC API PHÂN TÍCH VÀ THEO DÕI CHO CLIENT GỌI
+// ==========================================
+
+// --- [API GHI NHẬN LƯỢT TRUY CẬP TRANG HOẶC CLICK CHUỘT] ---
+app.post('/api/analytics/track', async (req, res) => {
+    try {
+        const { type, username, details } = req.body; // type: 'visit' hoặc 'click'
+        const today = new Date().toISOString().split('T')[0];
+
+        // 1. Cộng dồn số liệu vào bảng Traffic tổng
+        const updateData = {};
+        if (type === 'visit') updateData.$inc = { visits: 1 };
+        if (type === 'click') updateData.$inc = { clicks: 1 };
+
+        await Traffic.findOneAndUpdate(
+            { date: today },
+            updateData,
+            { upsert: true, new: true }
+        );
+
+        // 2. Ghi chi tiết nhật ký vào hoạt động gần đây
+        const newActivity = new UserActivity({
+            username: username || "Khách vãng lai",
+            action: type === 'visit' ? "Truy cập hệ thống" : "Tương tác click chuột",
+            details: details || "Người dùng tương tác phần mềm"
+        });
+        await newActivity.save();
+
+        // 3. Nếu đang đăng nhập, liên tục cập nhật trạng thái hoạt động
+        if (username && username !== "Khách vãng lai") {
+            await User.findOneAndUpdate(
+                { username },
+                { isOnline: true, lastActive: new Date() }
+            );
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi ghi nhận thống kê hệ thống!" });
+    }
+});
+
+// --- [API ĐỔI TRẠNG THÁI SANG OFFLINE KHI USER BẤM ĐĂNG XUẤT] ---
+app.post('/api/auth/logout-status', async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (username) {
+            await User.findOneAndUpdate({ username }, { isOnline: false, lastActive: new Date() });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi đồng bộ trạng thái đăng xuất!" });
+    }
+});
+
+
+// ==========================================
 // 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
 // ==========================================
+
+// --- [API LẤY TOÀN BỘ SỐ LIỆU ĐỂ HIỂN THỊ DASHBOARD ADMIN] ---
+app.get('/api/admin/dashboard-stats', async (req, res) => {
+    try {
+        // 1. Tính tổng doanh thu (chỉ cộng dồn các đơn đã thanh toán thành công)
+        const paidOrders = await Order.find({ paymentStatus: 'Đã thanh toán' });
+        const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+        // 2. Gom tổng số visits và clicks từ trước đến nay
+        const trafficData = await Traffic.find({});
+        const totalVisits = trafficData.reduce((sum, t) => sum + t.visits, 0);
+        const totalClicks = trafficData.reduce((sum, t) => sum + t.clicks, 0);
+
+        // 3. Đếm số lượng user đang trực tuyến thực tế
+        const onlineUsersCount = await User.countDocuments({ isOnline: true });
+
+        res.json({
+            totalRevenue,
+            totalVisits,
+            totalClicks,
+            onlineUsersCount
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi lấy dữ liệu tổng hợp Admin!" });
+    }
+});
+
+// --- [API LẤY 20 HOẠT ĐỘNG TRUY CẬP GẦN ĐÂY NHẤT] ---
+app.get('/api/admin/recent-activities', async (req, res) => {
+    try {
+        const activities = await UserActivity.find().sort({ createdAt: -1 }).limit(20);
+        res.json(activities);
+    } catch (error) {
+        res.status(500).json({ error: "Không thể tải lịch sử truy cập!" });
+    }
+});
+
+// --- [API LẤY TRẠNG THÁI ONLINE/OFFLINE CỦA TOÀN BỘ TÀI KHOẢN] ---
+app.get('/api/admin/users-status', async (req, res) => {
+    try {
+        const users = await User.find({}, 'username fullName role isOnline lastActive')
+                                .sort({ isOnline: -1, lastActive: -1 });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: "Không thể lấy trạng thái các tài khoản!" });
+    }
+});
 
 app.get('/api/users', async (req, res) => {
     try {
