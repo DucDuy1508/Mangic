@@ -232,6 +232,7 @@ app.put('/api/orders/:id/pay', async (req, res) => {
         
         if (timeDiff > 15 || order.orderStatus === 'Hủy đơn') {
             order.orderStatus = 'Hủy đơn';
+            order.paymentStatus = 'Thất bại'; // Ép trạng thái tiền thành Thất bại khi đơn bị quá hạn tự hủy
             await order.save();
             return res.status(400).json({ error: "Đơn hàng đã quá hạn 15 phút quy định và bị hệ thống hủy bỏ!" });
         }
@@ -245,7 +246,7 @@ app.put('/api/orders/:id/pay', async (req, res) => {
     }
 });
 
-// --- [API MỚI CẬP NHẬT: USER CHỦ ĐỘNG TỰ HỦY ĐƠN HÀNG TRÊN TRANG LỊCH SỬ] ---
+// --- [API USER CHỦ ĐỘNG TỰ HỦY ĐƠN HÀNG TRÊN TRANG LỊCH SỬ - ĐÃ VÁ ĐỒNG BỘ TRẠNG THÁI TIỀN] ---
 app.put('/api/orders/:id/cancel', async (req, res) => {
     try {
         const { id } = req.params;
@@ -265,8 +266,9 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
             return res.status(400).json({ error: `Đơn hàng đã chuyển sang trạng thái [${order.orderStatus}], không thể tự hủy!` });
         }
 
-        // Thực thi đổi trạng thái sang hủy đơn
+        // Thực thi đổi trạng thái đồng bộ: Vận chuyển -> Hủy đơn | Tiền hàng -> Thất bại
         order.orderStatus = 'Hủy đơn';
+        order.paymentStatus = 'Thất bại'; // 🔥 VÁ LỖI CHUYÊN NGHIỆP: Đổi trạng thái tiền sang Thất bại ngay lập tức
         await order.save();
 
         // Ghi nhật ký hoạt động
@@ -462,7 +464,7 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-// --- [API ĐÃ CẬP NHẬT: ĐIỀU CHỈNH TRẠNG THÁI GIAO HÀNG ĐA DẠNG NÂNG CAO + CRM] ---
+// --- [API ĐÃ CẬP NHẬT: ĐIỀU CHỈNH TRẠNG THÁI GIAO HÀNG ĐA DẠNG NÂNG CAO + CRM + ĐỒNG BỘ HỦY TIỀN] ---
 app.put('/api/admin/orders/:id/update-status', async (req, res) => {
     try {
         const { id } = req.params;
@@ -483,9 +485,13 @@ app.put('/api/admin/orders/:id/update-status', async (req, res) => {
         if (orderStatus) order.orderStatus = orderStatus;
         if (paymentStatus) order.paymentStatus = paymentStatus;
 
-        // Nếu chuyển sang trạng thái "Đã giao" -> Ép trạng thái tiền thành "Đã thanh toán" (Đặc biệt với đơn COD)
+        // --- TỰ ĐỘNG HÓA TRẠNG THÁI THANH TOÁN THEO QUY TRÌNH DOANH NGHIỆP ---
         if (order.orderStatus === 'Đã giao') {
-            order.paymentStatus = 'Đã thanh toán';
+            order.paymentStatus = 'Đã thanh toán'; // Đơn đã giao hoàn tất -> Tiền chắc chắn thu hồi xong
+        }
+
+        if (order.orderStatus === 'Hủy đơn') {
+            order.paymentStatus = 'Thất bại'; // 🔥 VÁ LỖI QUAN TRỌNG: Admin bấm nút Hủy đơn -> Tiền hàng tự nhảy sang Thất bại đồng bộ
         }
 
         await order.save();
