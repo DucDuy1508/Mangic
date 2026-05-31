@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./assets/css/style.css">
     <link rel="stylesheet" href="./assets/css/responsive.css">
-    <!-- themify icon cdn -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
-    <!-- fontawesome -->
     <link rel="stylesheet" href="./assets/font/fontawesome-free-6.6.0-web/css/all.min.css">
-    <!-- Boostrap CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Mangic</title>
 </head>
 <body>
-    <!-- He -->
     <header id="header" class="">
         <div class="header-logo">
             <a href="index.html"><img src="./assets/img/logo.png" alt="Mangic Logo" class="logo-img"></a>
@@ -28,22 +24,23 @@
             <li class="nav-item"><a href="#blog" class="nav-link">Bài viết</a></li>
             <li class="nav-item"><a href="#contact" class="nav-link">Liên hệ</a></li>
         </ul>
-<div class="header-control d-flex align-items-center gap-3">
-    <a href="giohang.html" style="color: inherit;"><i class="header-control__icon ti ti-shopping-cart"></i></a>
-    <a href="lichsu.html" class="btn btn-warning btn-sm me-2 fw-bold text-dark shadow-sm">
-    <i class="ti ti-time me-1"></i> Lịch sử mua hàng
-</a>
-    <a href="dangnhap.html" id="userLink" class="text-decoration-none d-flex align-items-center gap-1" style="color: #666;">
-        <i class="header-control__icon ti ti-user" style="margin-right: 2px;"></i>
-        <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">Đăng nhập</span>
-    </a>
+        <div class="header-control d-flex align-items-center gap-3">
+            <a href="giohang.html" style="color: inherit;"><i class="header-control__icon ti ti-shopping-cart"></i></a>
+            <a href="lichsu.html" class="btn btn-warning btn-sm me-2 fw-bold text-dark shadow-sm">
+                <i class="ti ti-time me-1"></i> Lịch sử mua hàng
+            </a>
+            <a href="dangnhap.html" id="userLink" class="text-decoration-none d-flex align-items-center gap-1" style="color: #666;">
+                <i class="header-control__icon ti ti-user" style="margin-right: 2px;"></i>
+                <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">Đăng nhập</span>
+            </a>
 
-    <div id="userInfoBlock" class="d-flex align-items-center gap-2" style="display: none !important;">
-        <span id="welcomeName" class="fw-bold" style="font-size: 14px; color: #ffbc00; letter-spacing: 0.3px;"></span>
-        <button id="btnLogout" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 12px; padding: 2px 8px;">Đăng xuất</button>
-    </div>
-</div>
+            <div id="userInfoBlock" class="d-flex align-items-center gap-2" style="display: none !important;">
+                <span id="welcomeName" class="fw-bold" style="font-size: 14px; color: #ffbc00; letter-spacing: 0.3px;"></span>
+                <button id="btnLogout" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 12px; padding: 2px 8px;">Đăng xuất</button>
+            </div>
+        </div>
     </header>
+
     <div id="banner">
         <div class="container">
             <div class="row align-items-center justify-content-between">
@@ -63,6 +60,7 @@
             </div>
         </div>
     </div>
+
     <div id="shop">
         <div class="container">
             <div class="row">
@@ -76,40 +74,47 @@
                 <div class="product-category container col-sm-12 col-lg-9">
                     <div class="container">
                         <div class="row">
-                           <div class="col-lg-4 col-sm-12">
+                            
+                            <div class="col-lg-4 col-sm-12 product-item" data-id="000000000000000000000001">
                                 <div class="product-card">
-                                    <a href="sanpham.html?id=dr-stone">
-                                    <img src="./assets/img/product-1.jpg" alt="" class="product-img">
-                                    <p class="product-name">Dr. Stone</p>
-                                    <p class="product-price">45,000 VND</p>
-                                    <i class="product-icon ti ti-plus"></i></a>
+                                    <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                        <img src="./assets/img/product-1.jpg" alt="" class="product-img">
+                                        <p class="product-name">Dr. Stone</p>
+                                        <p class="product-price">45,000 VND</p>
+                                        <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000001', 'Dr. Stone', 45000, './assets/img/product-1.jpg')"></i>
+                                    </a>
                                 </div>
-                           </div>
-                           <div class="col-lg-4 col-sm-12">
-                           
-                            <div class="product-card">
-                                 <a href="sanpham.html?id=jujutsu-kaisen">
-                                <img src="./assets/img/product-2.jpg" alt="" class="product-img">
-                                <p class="product-name">Jujutsu Kaisen</p>
-                                <p class="product-price">59,000 VND</p>
-                                <i class="product-icon ti ti-plus"></i></a>
                             </div>
-                           </div>
-                           <div class="col-lg-4 col-sm-12">
-                            <div class="product-card">
-                                <a href="sanpham.html?id=spy-x-family">
-                                <img src="./assets/img/product-3.jpg" alt="" class="product-img">
-                                <p class="product-name">Spy x Family</p>
-                                <p class="product-price">49,000 VND</p>
-                                <i class="product-icon ti ti-plus"></i></a>
+
+                            <div class="col-lg-4 col-sm-12 product-item" data-id="000000000000000000000002">
+                                <div class="product-card">
+                                    <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                        <img src="./assets/img/product-2.jpg" alt="" class="product-img">
+                                        <p class="product-name">Jujutsu Kaisen</p>
+                                        <p class="product-price">59,000 VND</p>
+                                        <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000002', 'Jujutsu Kaisen', 59000, './assets/img/product-2.jpg')"></i>
+                                    </a>
+                                </div>
                             </div>
-                           </div> 
+
+                            <div class="col-lg-4 col-sm-12 product-item" data-id="000000000000000000000003">
+                                <div class="product-card">
+                                    <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                        <img src="./assets/img/product-3.jpg" alt="" class="product-img">
+                                        <p class="product-name">Spy x Family</p>
+                                        <p class="product-price">49,000 VND</p>
+                                        <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000003', 'Spy x Family', 49000, './assets/img/product-3.jpg')"></i>
+                                    </a>
+                                </div>
+                            </div> 
+
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div id="about">
         <div class="container">
             <div class="row">
@@ -159,6 +164,7 @@
             </div>
         </div>
     </div>
+
     <div id="services">
         <div class="container">
             <div class="row">
@@ -171,8 +177,7 @@
                     <div class="service-text">
                         <div class="row">
                             <h4 class="service-heading">Mangic - Phép Màu Trong Tầm Tay</h4>
-                            <p class="service-desc">Đưa trải nghiệm đọc và sưu tầm Manga của bạn lên một tầm cao mới với hệ thống tính năng thông minh.
-                            </p>
+                            <p class="service-desc">Đưa trải nghiệm đọc và sưu tầm Manga của bạn lên một tầm cao mới với hệ thống tính năng thông minh.</p>
                         </div>
                         <div class="row">
                             <div class="col-6">
@@ -212,11 +217,8 @@
             </div>
         </div>
     </div>
-    <br>
-    <br>
-    <br>
 
-<div class="container service-cards-wrapper mt-5">
+    <div class="container service-cards-wrapper mt-5">
         <div class="row">
             <div class="col-lg-4 col-sm-12">
                 <div class="service-card">
@@ -333,61 +335,64 @@
             </div>
         </div>
     </div>
-    <div class="container-fluid p-0 mt-0 mb-5">
-    <div class="row g-0"> <div class="col-12">
-            <img src="./assets/img/banner.png" class="img-fluid w-100 shadow" alt="Banner Manga Mới Nhất">
-        </div>
-    </div>
-</div>
-<div id="contact">
-    <div id="footer" class="py-5 border-top">
-    <div class="container footer-wrapper">
-        <div class="row justify-content-between">
-            <div class="col-lg-4 col-md-12 mb-4 mb-lg-0">
-                <div class="footer-logo mb-3">
-                    <a href="index.html" class="text-decoration-none">
-                        <h2 class="fw-bold text-dark mb-0">Mangic</h2>
-                    </a>
-                </div>
-                <p class="footer-text text-muted pe-lg-5">
-                    Thiên đường dành cho bạn với hàng nghìn đầu truyện từ kinh điển đến mới nhất. 
-                    Cập nhật liên tục, giá tốt, giao hàng nhanh toàn quốc.
-                </p>
-                <div class="footer-brand-logo mt-4">
-                    <a href="" class="brand-logo-link me-3"><i class="ti ti-facebook"></i></a>
-                    <a href="" class="brand-logo-link me-3"><i class="ti ti-twitter-alt"></i></a>
-                    <a href="" class="brand-logo-link me-3"><i class="ti ti-instagram"></i></a>
-                    <a href="" class="brand-logo-link"><i class="ti ti-linkedin"></i></a>
-                </div>
-            </div>
 
-            <div class="col-lg-6 col-md-12">
-                <div class="row justify-content-end">
-                    <div class="col-sm-6 col-6 mb-4">
-                        <h6 class="fw-bold text-uppercase mb-3">Về chúng tôi</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Về chúng tôi</a></li>
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Dịch vụ</a></li>
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Thông tin</a></li>
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Liên hệ</a></li>
-                        </ul>
+    <div class="container-fluid p-0 mt-0 mb-5">
+        <div class="row g-0"> 
+            <div class="col-12">
+                <img src="./assets/img/banner.png" class="img-fluid w-100 shadow" alt="Banner Manga Mới Nhất">
+            </div>
+        </div>
+    </div>
+
+    <div id="contact">
+        <div id="footer" class="py-5 border-top">
+            <div class="container footer-wrapper">
+                <div class="row justify-content-between">
+                    <div class="col-lg-4 col-md-12 mb-4 mb-lg-0">
+                        <div class="footer-logo mb-3">
+                            <a href="index.html" class="text-decoration-none">
+                                <h2 class="fw-bold text-dark mb-0">Mangic</h2>
+                            </a>
+                        </div>
+                        <p class="footer-text text-muted pe-lg-5">
+                            Thiên đường dành cho bạn với hàng nghìn đầu truyện từ kinh điển đến mới nhất. 
+                            Cập nhật liên tục, giá tốt, giao hàng nhanh toàn quốc.
+                        </p>
+                        <div class="footer-brand-logo mt-4">
+                            <a href="" class="brand-logo-link me-3"><i class="ti ti-facebook"></i></a>
+                            <a href="" class="brand-logo-link me-3"><i class="ti ti-twitter-alt"></i></a>
+                            <a href="" class="brand-logo-link me-3"><i class="ti ti-instagram"></i></a>
+                            <a href="" class="brand-logo-link"><i class="ti ti-linkedin"></i></a>
+                        </div>
                     </div>
-                    <div class="col-sm-6 col-6 mb-4">
-                        <h6 class="fw-bold text-uppercase mb-3">Hỗ trợ khách hàng</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Hỗ trợ</a></li>
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Cập nhật</a></li>
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Live Chat</a></li>
-                            <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Điều khoản pháp lý</a></li>
-                        </ul>
+
+                    <div class="col-lg-6 col-md-12">
+                        <div class="row justify-content-end">
+                            <div class="col-sm-6 col-6 mb-4">
+                                <h6 class="fw-bold text-uppercase mb-3">Về chúng tôi</h6>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Về chúng tôi</a></li>
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Dịch vụ</a></li>
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Thông tin</a></li>
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Liên hệ</a></li>
+                                </ul>
+                            </div>
+                            <div class="col-sm-6 col-6 mb-4">
+                                <h6 class="fw-bold text-uppercase mb-3">Hỗ trợ khách hàng</h6>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Hỗ trợ</a></li>
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Cập nhật</a></li>
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Live Chat</a></li>
+                                    <li class="mb-2"><a href="" class="footer-menu-link text-decoration-none text-muted">Điều khoản pháp lý</a></li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-</div>
-    
+        
     <div id="copyright">
         <div class="container">
             <div class="row">
@@ -397,12 +402,10 @@
             </div>
         </div>
     </div>
-    
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script src="./assets/Js/data.js"></script> 
-<script src="./assets/Js/app.js"></script> </body>
+        
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="./assets/Js/data.js"></script> 
+    <script src="./assets/Js/app.js"></script>
 </body>
 </html>
