@@ -610,27 +610,32 @@
         }
 
         // --- TAB 5: GIÁM SÁT TÀI KHOẢN TRỰC TUYẾN ---
-        function loadUsersStatusData() {
-            fetch(`${API_BASE}/api/admin/users-status`)
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('table-users-status').innerHTML = data.map(user => `
-                        <tr>
-                            <td>
-                                <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
-                                <div class="small text-muted">@${user.username} <span class="badge bg-secondary">${user.role}</span></div>
-                            </td>
-                            <td>
-                                <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
-                                <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
-                                    ${user.isOnline ? 'Online (Đang lướt web)' : 'Offline'}
-                                </span>
-                            </td>
-                            <td class="small text-dark fw-bold">${formatFullDateTime(user.lastActive)}</td>
-                        </tr>
-                    `).join('');
-                });
-        }
+function loadUsersStatusData() {
+    fetch(`${API_BASE}/api/admin/users-status`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('table-users-status');
+            tbody.innerHTML = data.map(user => `
+                <tr>
+                    <td>
+                        <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
+                        <div class="small text-muted">@${user.username} <span class="badge bg-secondary">${user.role || 'customer'}</span></div>
+                    </td>
+                    <td>
+                        <span class="badge bg-dark">${user.role || 'customer'}</span>
+                    </td>
+                    <td>
+                        <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
+                        <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
+                            ${user.isOnline ? 'Online' : 'Offline'}
+                        </span>
+                    </td>
+                    <td class="small text-dark fw-bold">${formatFullDateTime(user.lastActive)}</td>
+                </tr>
+            `).join('');
+        })
+        .catch(err => console.error("Lỗi load users status:", err));
+}
 
         function handleAdminLogout() {
             Swal.fire({
