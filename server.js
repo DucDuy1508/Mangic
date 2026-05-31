@@ -287,12 +287,13 @@ app.post('/api/auth/logout-status', async (req, res) => {
 
 
 // ==========================================
-// 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN) - ĐÃ UPGRADE THEO YÊU CẦU
+// 8. HỆ THỐNG API DÀNH RIÊNG CHO QUẢN TRỊ (ADMIN)
 // ==========================================
 
-// --- [API TỔNG HỢP SỐ LIỆU DASHBOARD] ---
+// --- [API CẬP NHẬT: LẤY SỐ LIỆU DASHBOARD + SỐ LIỆU 7 NGÀY GẦN NHẤT ĐỂ VẼ BIỂU ĐỒ MƯỢT MÀ] ---
 app.get('/api/admin/dashboard-stats', async (req, res) => {
     try {
+        // 1. Tính toán các số liệu tổng quan ở các khối hộp (Giữ nguyên)
         const paidOrders = await Order.find({ paymentStatus: 'Đã thanh toán' });
         const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
@@ -302,7 +303,17 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
 
         const onlineUsersCount = await User.countDocuments({ isOnline: true });
 
-        res.json({ totalRevenue, totalVisits, totalClicks, onlineUsersCount });
+        // 2. ĐÃ SỬA: Lấy dữ liệu chi tiết của 7 ngày gần nhất để làm trục hoành X giúp đồ thị uốn lượn
+        const chartData = await Traffic.find({}).sort({ date: -1 }).limit(7);
+        chartData.reverse(); // Đảo ngược mảng để ngày cũ đứng trước, ngày mới đứng sau
+
+        res.json({
+            totalRevenue,
+            totalVisits,
+            totalClicks,
+            onlineUsersCount,
+            chartTimeline: chartData // Trả kèm mảng mượt mà gom theo ngày [{date, visits, clicks}, ...]
+        });
     } catch (error) {
         res.status(500).json({ error: "Lỗi lấy dữ liệu tổng hợp Admin!" });
     }
@@ -321,22 +332,15 @@ app.get('/api/admin/recent-activities', async (req, res) => {
 // --- [API NÂNG CAO: THỐNG KÊ CHI TIẾT TÀI KHOẢN + ĐƠN ĐẶT/HỦY + TÍCH LŨY + PHÂN HẠNG CRM] ---
 app.get('/api/admin/customer-stats', async (req, res) => {
     try {
-        // 1. Quét toàn bộ danh sách user (ẩn mật khẩu)
         const users = await User.find({}, '-password');
 
-        // 2. Chạy hàm tổng hợp đơn hàng động dựa trên từng Username
         const stats = await Promise.all(users.map(async (user) => {
-            // Đếm đơn đặt thành công (Trạng thái khác 'Hủy đơn')
             const totalOrders = await Order.countDocuments({ username: user.username, orderStatus: { $ne: 'Hủy đơn' } });
-            
-            // Đếm đơn hàng bị hủy bỏ
             const canceledOrders = await Order.countDocuments({ username: user.username, orderStatus: 'Hủy đơn' });
             
-            // Tính số tiền tích lũy thực tế (Chỉ những đơn hàng Đã thanh toán)
             const paidOrders = await Order.find({ username: user.username, paymentStatus: 'Đã thanh toán' });
             const totalSpent = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-            // 3. Quy chuẩn tính toán Phạng thành viên thông minh
             let rank = "Thành viên Bạc";
             if (totalSpent >= 1000000) rank = "Thành viên Vàng 🌟";
             if (totalSpent >= 3000000) rank = "Thành viên Kim Cương 💎";
@@ -352,7 +356,6 @@ app.get('/api/admin/customer-stats', async (req, res) => {
             };
         }));
 
-        // Trả về mảng đã xếp hạng theo ví tiền tích lũy giảm dần
         stats.sort((a, b) => b.totalSpent - a.totalSpent);
         res.json(stats);
     } catch (error) {
