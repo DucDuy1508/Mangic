@@ -665,7 +665,7 @@ io.on('connection', (socket) => {
     });
 });
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); // Lấy key ở aistudio.google.com
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY); // Lấy key ở aistudio.google.com
 
 // [SỬA ĐOẠN API AI-CHAT NÀY]
 app.post('/api/ai-chat', async (req, res) => {
