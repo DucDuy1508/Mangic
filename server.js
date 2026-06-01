@@ -13,8 +13,14 @@ const { Server } = require('socket.io');
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // Cấp quyền cho mọi thiết bị Frontend kết nối trò chuyện
-        methods: ["GET", "POST"]
+        // 🔥 ĐÃ SỬA: Khai báo đích danh các domain được phép kết nối để Browser không chặn luồng chat
+        origin: [
+            "http://127.0.0.1:5500",        // Link chạy máy nhà Live Server
+            "http://localhost:5500",
+            "https://mangic.vercel.app" // 🌟 THAY BẰNG LINK VERCEL THỰC TẾ CỦA ÔNG ÔNG DUY NHÉ
+        ],
+        methods: ["GET", "POST"],
+        credentials: true // Cho phép truyền nhận định danh an toàn giữa Vercel và Render
     }
 });
 
