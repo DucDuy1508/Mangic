@@ -311,7 +311,11 @@
         const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
         let analyticsChartInstance = null;
         let userPieChartInstance = null;
-        let adminChatSocket = io(API_BASE); 
+        // 🔥 ĐÃ SỬA ĐỒNG BỘ CLOUD: Cấu hình ép HTTP Polling giúp luồng Socket chạy mượt mà trên Render Free không bị chặn
+let adminChatSocket = io(API_BASE, {
+    transports: ['polling', 'websocket'],
+    withCredentials: true
+});
         
         let currentSelectedUser = "";        
         let unreadCounts = {};               // Quản lý lưu trữ đếm số lượng tin chưa đọc từng người: { dduy: 1 }
@@ -698,50 +702,59 @@
 
         // 2. Hàm sinh danh sách hàng chờ bốc từ CRM stats
         function loadAdminChatUserList() {
-            fetch(`${API_BASE}/api/admin/customer-stats`)
-            .then(res => res.json())
-            .then(users => {
-                const listContainer = document.getElementById("adminChatUserList");
-                listContainer.innerHTML = "";
-                
-                const customers = users.filter(u => u.username !== 'admin');
-                
-                // Khớp logic xếp hạng: User có trong mảng activeUsersOrder xếp lên đầu hàng
-                const orderedCustomers = [...customers].sort((a, b) => {
-                    const indexA = activeUsersOrder.indexOf(a.username);
-                    const indexB = activeUsersOrder.indexOf(b.username);
-                    
-                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    if (indexA !== -1) return -1;
-                    if (indexB !== -1) return 1;
-                    return 0;
-                });
-                
-                orderedCustomers.forEach(cust => {
-                    const btn = document.createElement("button");
-                    const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
-                    
-                    // Tính toán và dán badge đếm số lượng tin nhắn riêng lẻ chưa đọc
-                    const userUnread = unreadCounts[cust.username] || 0;
-                    const badgeHtml = userUnread > 0 
-                        ? `<span class="badge bg-danger rounded-pill float-end mt-1">${userUnread} tin mới</span>` 
-                        : '';
-                    
-                    btn.className = `list-group-item list-group-item-action d-flex flex-column border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
-                    btn.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <span class="fw-bold text-truncate" style="font-size: 15px;">
-                                <i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}
-                            </span>
-                            ${badgeHtml}
-                        </div>
-                        <span class="small text-muted mt-1" style="font-size:12px;">@${cust.username}</span>
-                    `;
-                    btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
-                    listContainer.appendChild(btn);
-                });
-            });
-        }
+    fetch(`${API_BASE}/api/admin/customer-stats`)
+    .then(res => res.json())
+    .then(users => {
+        const listContainer = document.getElementById("adminChatUserList");
+        listContainer.innerHTML = "";
+        
+        const customers = users.filter(u => u.username !== 'admin');
+        
+        // Khớp logic ưu tiên: Khách hàng nào có tin nhắn mới luôn được đẩy lên đầu hàng
+        const orderedCustomers = [...customers].sort((a, b) => {
+            const indexA = activeUsersOrder.indexOf(a.username);
+            const indexB = activeUsersOrder.indexOf(b.username);
+            
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return 0;
+        });
+        
+        orderedCustomers.forEach(cust => {
+            const btn = document.createElement("button");
+            const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
+            
+            // Tính toán số lượng tin nhắn chưa đọc của riêng user này
+            const userUnreadCount = unreadCounts[cust.username] || 0;
+            let userBadgeHtml = "";
+            
+            // Nếu có tin nhắn mới -> Tạo badge màu đỏ ghim bên phải khung tên
+            if (userUnreadCount > 0) {
+                userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
+            }
+            
+            btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+            
+            // Thiết kế layout d-flex cấu trúc 2 vế: Vế trái là Tên/User, Vế phải là Badge số tin mới
+            btn.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="text-start text-truncate" style="max-width: 70%;">
+                        <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                        <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
+                    </div>
+                    <div class="text-end">
+                        ${userBadgeHtml}
+                    </div>
+                </div>
+            `;
+            
+            btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
+            listContainer.appendChild(btn);
+        });
+    })
+    .catch(err => console.error("Lỗi đồng bộ danh sách hàng chờ chat:", err));
+}
 
         // 3. Khi Admin bấm chọn tiếp nhận hỗ trợ một khách hàng cụ thể
         function selectUserToChat(username, fullName) {
@@ -787,32 +800,32 @@
 
         // 5. 🔥 ĐÃ SỬA TUYỆT ĐỐI LỖI UI: Hàm render chia luồng bong bóng tin nhắn khít khao trái phải và co giãn dọc
         function appendAdminChatMessage(sender, text) {
-            const chatBody = document.getElementById("adminChatBody");
-            const wrapperDiv = document.createElement("div");
-            
-            // Ép d-flex chiếm trọn 100% chiều ngang hàng và chặn kéo giãn dọc bằng "align-items-start"
-            wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
-            
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "admin-chat-msg p-2 rounded-3";
-            msgDiv.innerHTML = text;
-            
-            if (sender === 'admin') {
-                // Admin gửi -> Đẩy dính lề PHẢI (justify-content-end), nền màu Đen (bg-dark)
-                wrapperDiv.className += " justify-content-end";
-                msgDiv.className += " bg-dark text-white text-end";
-            } else {
-                // Khách hàng gửi -> Đẩy dính lề TRÁI (justify-content-start), nền màu VÀNG (bg-warning)
-                wrapperDiv.className += " justify-content-start";
-                msgDiv.className += " bg-warning text-dark text-start";
-            }
-            
-            wrapperDiv.appendChild(msgDiv);
-            chatBody.appendChild(wrapperDiv);
-            
-            // Tự cuộn chuột trượt mượt xuống đáy trang trò chuyện
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
+    const chatBody = document.getElementById("adminChatBody");
+    const wrapperDiv = document.createElement("div");
+    
+    // 🔥 ĐÃ VÁ: Thêm "align-items-start" để tin nhắn co lại theo nội dung chữ, không bị kéo giãn dọc!
+    wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
+    
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "admin-chat-msg p-2 rounded-3";
+    msgDiv.innerHTML = text;
+    
+    if (sender === 'admin') {
+        // Admin gửi -> Đẩy dính lề PHẢI, nền màu Đen, chữ Trắng
+        wrapperDiv.className += " justify-content-end";
+        msgDiv.className += " bg-dark text-white text-end";
+    } else {
+        // Khách hàng gửi -> Đẩy dính lề TRÁI, nền màu VÀNG, chữ Đen
+        wrapperDiv.className += " justify-content-start";
+        msgDiv.className += " bg-warning text-dark text-start";
+    }
+    
+    wrapperDiv.appendChild(msgDiv);
+    chatBody.appendChild(wrapperDiv);
+    
+    // Tự cuộn chuột trượt mượt xuống đáy trang trò chuyện
+    chatBody.scrollTop = chatBody.scrollHeight;
+}
 
         // 6. Hàm đồng bộ tổng số lượng tin nhắn chưa đọc lên Sidebar menu
         function updateSidebarTotalBadge() {
