@@ -668,14 +668,14 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY); // Lấy key ở aistudio.google.com
 
 // [SỬA ĐOẠN API AI-CHAT NÀY]
+// [SỬA ĐOẠN API AI-CHAT NÀY TRONG server.js]
 app.post('/api/ai-chat', async (req, res) => {
     try {
         const { message } = req.body;
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
-        // Dùng thư viện chính chủ, nó tự tìm Model phù hợp nhất
-        // Sửa đúng dòng này:
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // TUI ĐÃ ĐỔI LẠI THÀNH gemini-1.5-flash VÌ ĐÂY LÀ BẢN CHUẨN NHẤT HIỆN TẠI
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = `Bạn là nhân viên tư vấn cho cửa hàng truyện tranh Mangic. 
         Danh sách truyện: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan. 
@@ -689,7 +689,6 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         res.json({ reply: text });
     } catch (error) {
         console.error("Lỗi AI:", error);
-        // Trả về nội dung lỗi để ông đọc trên giao diện chat
         res.status(500).json({ reply: "Lỗi AI: " + error.message });
     }
 });
