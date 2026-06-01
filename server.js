@@ -666,18 +666,15 @@ io.on('connection', (socket) => {
 });
 
 // Dùng fetch mô phỏng chính xác cURL của Google AI Studio
+// Dùng fetch có cơ chế TỰ ĐỘNG THỬ LẠI (Retry) và CHỐNG SẬP (Fallback)
 app.post('/api/ai-chat', async (req, res) => {
     try {
         const { message } = req.body;
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
-        // Vẫn lấy Key từ Render để bảo mật (không dán trực tiếp cái AQ... vào đây nha)
         const apiKey = process.env.GOOGLE_API_KEY; 
-        
-        // Dùng ĐÚNG cái link mà cURL của ông cung cấp
         const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
-        // Đóng gói luật của Mangic và câu hỏi của khách
         const promptData = {
             contents: [{
                 parts: [{
@@ -689,31 +686,50 @@ Khách hàng hỏi: ${message}`
             }]
         };
 
-        // Gửi request bằng fetch y hệt cURL
-        const response = await fetch(url, {
+        const options = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-goog-api-key': apiKey // Gửi key qua Header giống cURL
+                'X-goog-api-key': apiKey
             },
             body: JSON.stringify(promptData)
-        });
+        };
 
-        const data = await response.json();
-        
-        // Bắt lỗi nếu Google vẫn chê
-        if (data.error) {
-            console.error(">>> Lỗi từ Google:", data.error);
-            return res.status(500).json({ reply: "Lỗi Google: " + data.error.message });
+        let data;
+        let isSuccess = false;
+
+        // VÒNG LẶP RETRY: Thử gọi AI tối đa 2 lần nếu bị báo bận
+        for (let i = 0; i < 2; i++) {
+            const response = await fetch(url, options);
+            data = await response.json();
+            
+            // Nếu không có lỗi (thành công)
+            if (!data.error) {
+                isSuccess = true;
+                break; 
+            }
+            
+            // Nếu có lỗi do Server bận (High demand / 429), đợi 2 giây rồi thử lại
+            console.log(`>>> AI đang bận (Lần thử ${i + 1}). Đang đợi 2s để thử lại...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        // Bóc tách câu trả lời
-        const replyText = data.candidates[0].content.parts[0].text;
-        res.json({ reply: replyText });
+        // XỬ LÝ KẾT QUẢ CUỐI CÙNG
+        if (isSuccess) {
+            const replyText = data.candidates[0].content.parts[0].text;
+            return res.json({ reply: replyText }); // Luôn trả về 200 OK để giao diện hiện tin nhắn
+        } else {
+            // Đã thử lại mà vẫn lỗi -> Trả về câu trả lời chữa cháy dễ thương
+            console.error(">>> Đã từ bỏ sau 2 lần thử, AI quá tải.");
+            return res.json({ 
+                reply: "Xin lỗi bạn, hiện tại cửa hàng Mangic đang có quá đông khách nhờ tư vấn nên tớ bị quá tải một chút. Bạn đợi tớ khoảng 1 phút rồi nhắn lại nhé! 🥺" 
+            });
+        }
 
     } catch (error) {
-        console.error(">>> Lỗi Server:", error);
-        res.status(500).json({ reply: "Lỗi Server: " + error.message });
+        console.error(">>> Lỗi Hệ thống:", error);
+        // Bắt lỗi sập mạng hoặc lỗi hệ thống khác
+        res.json({ reply: "Xin lỗi, hệ thống AI đang bảo trì nhẹ. Bạn hãy chuyển sang chat với Admin nhé!" });
     }
 });
 // ==========================================
