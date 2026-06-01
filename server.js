@@ -675,7 +675,7 @@ app.post('/api/ai-chat', async (req, res) => {
         const apiKey = process.env.GOOGLE_API_KEY; 
         
         // Dùng ĐÚNG cái link mà cURL của ông cung cấp
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
         // Đóng gói luật của Mangic và câu hỏi của khách
         const promptData = {
