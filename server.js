@@ -7,6 +7,17 @@ const app = express();
 app.use(express.json());
 app.use(cors()); // Cho phép Live Server hoặc Vercel gọi API không bị chặn
 
+// --- [BỔ SUNG CẤU HÌNH REALTIME: HTTP SERVER & SOCKET.IO] ---
+const http = require('http');
+const { Server } = require('socket.io');
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Cấp quyền cho mọi thiết bị Frontend kết nối trò chuyện
+        methods: ["GET", "POST"]
+    }
+});
+
 // ==========================================
 // 1. KẾT NỐI CƠ SỞ DỮ LIỆU (MONGODB LOCAL / CLOUD)
 // ==========================================
@@ -104,6 +115,17 @@ const UserActivitySchema = new mongoose.Schema({
 });
 const UserActivity = mongoose.model('UserActivity', UserActivitySchema);
 
+// ==========================================
+// [BỔ SUNG SCHEMA] ĐỊNH NGHĨA CẤU TRÚC CƠ SỞ DỮ LIỆU TIN NHẮN CHAT REALTIME
+// ==========================================
+const MessageSchema = new mongoose.Schema({
+    username: { type: String, required: true }, // Phòng chat định danh theo username của khách
+    sender: { type: String, required: true },   // Định danh người gửi: 'customer' hoặc 'admin'
+    text: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+const Message = mongoose.model('Message', MessageSchema);
+
 
 // ==========================================
 // SYSTEM API: QUẢN LÝ SẢN PHẨM KHÔNG DÙNG OBJECTID MẶC ĐỊNH
@@ -198,7 +220,6 @@ app.post('/api/orders', async (req, res) => {
     try {
         const { username, items, totalAmount, discountCode, paymentMethod, shippingInfo, orderCode } = req.body;
         
-        // Mẹo đồ án: Nếu khách chọn thanh toán bằng hình thức COD thì cho cờ paymentStatus là "Chờ thanh toán COD" luôn cho tường minh
         const initialPayStatus = paymentMethod === 'COD' ? 'Chờ thanh toán COD' : 'Chờ thanh toán';
         const initialOrderStatus = 'Chờ xử lý';
 
@@ -232,7 +253,7 @@ app.put('/api/orders/:id/pay', async (req, res) => {
         
         if (timeDiff > 15 || order.orderStatus === 'Hủy đơn') {
             order.orderStatus = 'Hủy đơn';
-            order.paymentStatus = 'Thất bại'; // Ép trạng thái tiền thành Thất bại khi đơn bị quá hạn tự hủy
+            order.paymentStatus = 'Thất bại'; 
             await order.save();
             return res.status(400).json({ error: "Đơn hàng đã quá hạn 15 phút quy định và bị hệ thống hủy bỏ!" });
         }
@@ -246,7 +267,6 @@ app.put('/api/orders/:id/pay', async (req, res) => {
     }
 });
 
-// --- [API USER CHỦ ĐỘNG TỰ HỦY ĐƠN HÀNG TRÊN TRANG LỊCH SỬ - ĐÃ VÁ ĐỒNG BỘ TRẠNG THÁI TIỀN] ---
 app.put('/api/orders/:id/cancel', async (req, res) => {
     try {
         const { id } = req.params;
@@ -256,22 +276,18 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
             return res.status(404).json({ error: "Đơn hàng yêu cầu xử lý hủy không tồn tại!" });
         }
 
-        // RÀO CHẮN BẢO MẬT: Kiểm tra phương thức thanh toán
         if (order.paymentMethod !== 'COD') {
             return res.status(400).json({ error: "Hệ thống không hỗ trợ tự hủy đơn hàng QR Online. Vui lòng liên hệ Admin để xử lý hoàn tiền!" });
         }
 
-        // RÀO CHẮN BẢO MẬT: Kiểm tra trạng thái đơn hàng vận chuyển
         if (order.orderStatus !== 'Chờ xử lý') {
             return res.status(400).json({ error: `Đơn hàng đã chuyển sang trạng thái [${order.orderStatus}], không thể tự hủy!` });
         }
 
-        // Thực thi đổi trạng thái đồng bộ: Vận chuyển -> Hủy đơn | Tiền hàng -> Thất bại
         order.orderStatus = 'Hủy đơn';
-        order.paymentStatus = 'Thất bại'; // 🔥 VÁ LỖI CHUYÊN NGHIỆP: Đổi trạng thái tiền sang Thất bại ngay lập tức
+        order.paymentStatus = 'Thất bại'; 
         await order.save();
 
-        // Ghi nhật ký hoạt động
         const cancelLog = new UserActivity({
             username: order.username,
             action: "Khách hủy đơn",
@@ -285,7 +301,16 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
     }
 });
 
-// --- [API ANALYTICS TRACKING CHO FRONTEND CLIENT] ---
+// --- [API MỚI: BỐC LẠI LỊCH SỬ TIN NHẮN CŨ KHI USER/ADMIN REFRESH TRANG] ---
+app.get('/api/chat/history/:username', async (req, res) => {
+    try {
+        const messages = await Message.find({ username: req.params.username }).sort({ createdAt: 1 });
+        res.json(messages);
+    } catch (error) {
+        res.status(500).json({ error: "Không thể tải lịch sử cuộc trò chuyện!" });
+    }
+});
+
 app.post('/api/analytics/track', async (req, res) => {
     try {
         const { type, username, details } = req.body;
@@ -321,7 +346,6 @@ app.post('/api/analytics/track', async (req, res) => {
     }
 });
 
-// --- [API ĐỔI TRẠNG THÁI SANG OFFLINE KHI USER ĐĂNG XUẤT] ---
 app.post('/api/auth/logout-status', async (req, res) => {
     try {
         const { username } = req.body;
@@ -454,7 +478,6 @@ app.delete('/api/users/:username', async (req, res) => {
     }
 });
 
-// --- [API ĐÃ CẬP NHẬT: TRẢ VỀ ĐẦY ĐỦ PHƯƠNG THỨC THANH TOÁN VÀ THÔNG TIN CHI TIẾT ĐƠN HÀNG] ---
 app.get('/api/admin/orders', async (req, res) => {
     try {
         const orders = await Order.find({}).sort({ createdAt: -1 });
@@ -464,7 +487,6 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-// --- [API ĐÃ CẬP NHẬT: ĐIỀU CHỈNH TRẠNG THÁI GIAO HÀNG ĐA DẠNG NÂNG CAO + CRM + ĐỒNG BỘ HỦY TIỀN] ---
 app.put('/api/admin/orders/:id/update-status', async (req, res) => {
     try {
         const { id } = req.params;
@@ -473,7 +495,6 @@ app.put('/api/admin/orders/:id/update-status', async (req, res) => {
         const order = await Order.findById(id);
         if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hàng trên hệ thống!" });
         
-        // Logic chặn State bảo vệ tính toàn vẹn của dữ liệu ERP
         if (order.orderStatus === 'Hủy đơn' && orderStatus !== 'Hủy đơn') {
             return res.status(400).json({ error: "Đơn hàng đã hủy bỏ, không thể chuyển đổi trạng thái!" });
         }
@@ -481,22 +502,19 @@ app.put('/api/admin/orders/:id/update-status', async (req, res) => {
             return res.status(400).json({ error: "Đơn hàng đã hoàn tất giao hàng thành công, không cho phép chỉnh sửa!" });
         }
 
-        // Tiến hành ghi nhận trạng thái mới từ Admin
         if (orderStatus) order.orderStatus = orderStatus;
         if (paymentStatus) order.paymentStatus = paymentStatus;
 
-        // --- TỰ ĐỘNG HÓA TRẠNG THÁI THANH TOÁN THEO QUY TRÌNH DOANH NGHIỆP ---
         if (order.orderStatus === 'Đã giao') {
-            order.paymentStatus = 'Đã thanh toán'; // Đơn đã giao hoàn tất -> Tiền chắc chắn thu hồi xong
+            order.paymentStatus = 'Đã thanh toán'; 
         }
 
         if (order.orderStatus === 'Hủy đơn') {
-            order.paymentStatus = 'Thất bại'; // 🔥 VÁ LỖI QUAN TRỌNG: Admin bấm nút Hủy đơn -> Tiền hàng tự nhảy sang Thất bại đồng bộ
+            order.paymentStatus = 'Thất bại'; 
         }
 
         await order.save();
 
-        // Ghi nhận lịch sử tương tác vào Activity Log cho Admin theo dõi
         const adminLog = new UserActivity({
             username: "Hệ thống Quản trị",
             action: "Chỉnh sửa đơn hàng",
@@ -609,7 +627,40 @@ app.post('/api/webhook/payment', async (req, res) => {
 });
 
 // ==========================================
+// 8b. ĐIỀU PHỐI LUỒNG TIN NHẮN REALTIME (SOCKET.IO ROUTING)
+// ==========================================
+io.on('connection', (socket) => {
+    console.log(`>>> [SOCKET CONNECTED] Thiết bị mới tham gia kênh chat: ${socket.id}`);
+
+    // Khi Client (User hoặc Admin) đăng ký tham gia phòng chat riêng biệt của khách
+    socket.on('join_room', (username) => {
+        socket.join(username);
+        console.log(`>>> [SOCKET ROOM] Kênh hội thoại riêng [@${username}] đã được thiết lập ổn định!`);
+    });
+
+    // Lắng nghe sự kiện truyền tải tin nhắn từ hai đầu hệ thống
+    socket.on('send_message', async (data) => {
+        try {
+            const { username, sender, text } = data;
+
+            // Tiến hành ghi nhớ và lưu trữ tin nhắn vào cụm database MongoDB Atlas
+            const newMessage = new Message({ username, sender, text });
+            await newMessage.save();
+
+            // Đẩy tin nhắn realtime lập tức đến đúng phòng chat định danh
+            io.to(username).emit('receive_message', newMessage);
+        } catch (err) {
+            console.error("Lỗi phân phối tin nhắn socket:", err);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`>>> [SOCKET DISCONNECTED] Thiết bị ngắt kết nối hội thoại: ${socket.id}`);
+    });
+});
+
+// ==========================================
 // 9. KHỞI CHẠY HỆ THỐNG MÁY CHỦ
 // ==========================================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`>>> Server Back-end đang chạy ổn định ở cổng ${PORT}`));
+server.listen(PORT, () => console.log(`>>> Server Back-end đang chạy ổn định ở cổng ${PORT}`));

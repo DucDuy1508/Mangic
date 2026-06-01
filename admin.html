@@ -34,6 +34,9 @@
         .status-offline { background-color: #cbd5e1; }
         .content-section { display: none; }
         .content-section.active { display: block; }
+        
+        /* Cấu trúc thiết kế tin nhắn chat Admin */
+        .admin-chat-msg { padding: 8px 12px; border-radius: 12px; max-width: 70%; font-size: 14px; word-break: break-word; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -48,6 +51,7 @@
             <li><a onclick="switchTab('section-orders')" id="btn-section-orders"><i class="ti ti-shopping-cart"></i>Quản lý đơn hàng</a></li>
             <li><a onclick="switchTab('section-coupons')" id="btn-section-coupons"><i class="ti ti-ticket"></i>Quản lý Coupon</a></li>
             <li><a onclick="switchTab('section-users')" id="btn-section-users"><i class="ti ti-pulse"></i>Giám sát tài khoản</a></li>
+            <li><a onclick="switchTab('section-customer-support')" id="btn-section-customer-support"><i class="ti ti-headphone-alt"></i>Hỗ trợ khách hàng</a></li>
             <li class="logout-item">
                 <a onclick="handleAdminLogout()" class="text-danger fw-bold"><i class="ti ti-power-off text-danger"></i>Đăng xuất hệ thống</a>
             </li>
@@ -231,6 +235,30 @@
             </div>
         </div>
 
+        <div id="section-customer-support" class="content-section">
+            <h3 class="fw-bold text-dark mb-4">Trung Tâm Hỗ Trợ Khách Hàng Realtime</h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="table-wrapper p-3">
+                        <h6 class="fw-bold text-secondary mb-3"><i class="ti ti-list me-1"></i> DANH SÁCH KHÁCH HÀNG</h6>
+                        <div class="list-group rounded-3" id="adminChatUserList" style="max-height: 420px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm rounded-3" style="height: 500px; display: flex; flex-direction: column;">
+                        <div class="card-header bg-dark text-white fw-bold py-3" id="adminChatHeaderTitle">
+                            <i class="ti ti-comments me-2"></i> Vui lòng chọn một khách hàng để tiếp nhận hỗ trợ
+                        </div>
+                        <div class="card-body bg-light overflow-y-auto d-flex flex-direction-column gap-2" id="adminChatBody" style="flex: 1; padding: 20px;"></div>
+                        <div class="card-footer bg-white p-3 d-flex gap-2 border-top">
+                            <input type="text" id="adminChatInput" class="form-control" placeholder="Nhập nội dung phản hồi Admin..." disabled>
+                            <button class="btn btn-dark fw-bold px-4" id="adminSendBtn" onclick="sendAdminReply()" disabled>Gửi</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="modal fade" id="addCouponModal" tabindex="-1" aria-hidden="true">
@@ -273,10 +301,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
         let analyticsChartInstance = null;
         let userPieChartInstance = null;
+        let adminChatSocket = io(API_BASE); // Khởi tạo kết nối mạng socket cho luồng admin
+        let currentSelectedUser = "";        // Lưu thông tin khách hàng đang được mở khung chat
 
         document.getElementById('cp-startdate').value = new Date().toISOString().split('T')[0];
 
@@ -298,6 +329,8 @@
             if (sectionId === 'section-orders') loadOrdersData();
             if (sectionId === 'section-coupons') loadCouponsData();
             if (sectionId === 'section-users') loadUsersStatusData();
+            // Điều hướng Tab chộp lấy danh sách CRM chat đổ vào khung hình
+            if (sectionId === 'section-customer-support') loadAdminChatUserList();
         }
 
         // --- TAB 1: DASHBOARD ---
@@ -319,7 +352,7 @@
                     document.getElementById('table-activities').innerHTML = data.map(act => `
                         <tr>
                             <td class="fw-bold text-secondary">@${act.username}</td>
-                            <td><span class="badge ${act.action.includes('Thanh toán') || act.action.includes('Xác thực') ? 'bg-success' : act.action.includes('Truy cập') ? 'bg-primary' : 'bg-secondary'}">${act.action}</span></td>
+                            <td><span class="badge ${act.action.includes('Thanh toán') || act.action.includes('Xác thực') || act.action.includes('hủy') ? 'bg-success' : act.action.includes('Truy cập') ? 'bg-primary' : 'bg-secondary'}">${act.action}</span></td>
                             <td class="small text-muted">${act.details}</td>
                             <td class="small text-dark fw-bold">${formatFullDateTime(act.createdAt)}</td>
                         </tr>
@@ -455,39 +488,33 @@
             });
         }
 
-        // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO (ĐÃ ĐỒNG BỘ ERP SỬA ĐỔI CHUYÊN NGHIỆP) ---
+        // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO (ĐỒNG BỘ 3 MÀU CHUẨN ĐÉT) ---
         function loadOrdersData() {
             fetch(`${API_BASE}/api/admin/orders`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('table-orders').innerHTML = data.map(order => {
-                        // 1. Phân định huy hiệu Trạng thái Vận chuyển
                         let orderStatusBadge = "";
                         if (order.orderStatus === 'Chờ xử lý') orderStatusBadge = `<span class="badge bg-warning text-dark py-2 px-2 rounded-pill">Chờ xử lý</span>`;
                         else if (order.orderStatus === 'Đang giao') orderStatusBadge = `<span class="badge bg-primary py-2 px-2 rounded-pill">Đang giao 🚚</span>`;
                         else if (order.orderStatus === 'Đã giao') orderStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-pill">Đã giao hoàn tất ✓</span>`;
                         else if (order.orderStatus === 'Hủy đơn') orderStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-pill">Đã hủy đơn ❌</span>`;
 
-                        // 2. Phân định huy hiệu Trạng thái Tiền bạc (Cập nhật màu Đỏ cho "Thất bại")
+                        // 🔥 ĐÃ SỬA ĐỒNG BỘ MÀU ĐỎ CẢNH BÁO CHO TRẠNG THÁI THẤT BẠI KHI ĐƠN BỊ HỦY BỎ
                         let paymentStatusBadge = "";
                         if (order.paymentStatus === 'Đã thanh toán') {
-                            paymentStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán</span>`;
+                            paymentStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán ✓</span>`;
                         } else if (order.paymentStatus === 'Thất bại') {
-                         // Đã sửa: Dùng màu đỏ cảnh báo (bg-danger) cho trạng thái Thất bại
                             paymentStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-3 text-white fw-bold">Thất bại ❌</span>`;
                         } else {
                             paymentStatusBadge = `<span class="badge bg-secondary py-2 px-2 rounded-3">Chờ thanh toán</span>`;
                         }
 
-                        // 3. Thiết kế hình thức thanh toán
                         let methodBadge = order.paymentMethod === 'QR'
                             ? `<span class="badge border border-info text-info fw-bold px-2 py-1"><i class="ti ti-qrcode me-1"></i> QR Code</span>`
                             : `<span class="badge border border-warning text-warning fw-bold px-2 py-1"><i class="ti ti-truck me-1"></i> Ship COD</span>`;
 
-                        // 4. Gom mảng danh sách sản phẩm truyện khách đặt mua
                         let itemsHtml = order.items.map(item => `• <strong>${item.name}</strong> (x${item.quantity})`).join("<br>");
-
-                        // Chặn điều kiện tắt nút: Nếu đơn đã hoàn thành hoặc đã hủy thì khóa cứng không cho bấm bậy phá DB
                         let isFinished = order.orderStatus === 'Đã giao' || order.orderStatus === 'Hủy đơn' ? 'disabled' : '';
 
                         return `
@@ -516,7 +543,6 @@
                 });
         }
 
-        // Hàm gọi API cập nhật trạng thái đơn hàng tích hợp kiểm tra bảo mật nghiêm ngặt
         function executeOrderStateUpdate(id, status, payment) {
             Swal.fire({
                 title: 'Xác nhận xử lý?',
@@ -542,7 +568,7 @@
                     })
                     .then(data => {
                         Swal.fire('Thành công!', data.message, 'success');
-                        loadOrdersData(); // Tải lại danh sách realtime lập tức
+                        loadOrdersData();
                     })
                     .catch(err => {
                         Swal.fire('Lỗi logic hệ thống', err.message, 'error');
@@ -609,33 +635,126 @@
             });
         }
 
-        // --- TAB 5: GIÁM SÁT TÀI KHOẢN TRỰC TUYẾN ---
-function loadUsersStatusData() {
-    fetch(`${API_BASE}/api/admin/users-status`)
-        .then(res => res.json())
-        .then(data => {
-            const tbody = document.getElementById('table-users-status');
-            tbody.innerHTML = data.map(user => `
-                <tr>
-                    <td>
-                        <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
-                        <div class="small text-muted">@${user.username} <span class="badge bg-secondary">${user.role || 'customer'}</span></div>
-                    </td>
-                    <td>
-                        <span class="badge bg-dark">${user.role || 'customer'}</span>
-                    </td>
-                    <td>
-                        <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
-                        <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
-                            ${user.isOnline ? 'Online' : 'Offline'}
-                        </span>
-                    </td>
-                    <td class="small text-dark fw-bold">${formatFullDateTime(user.lastActive)}</td>
-                </tr>
-            `).join('');
-        })
-        .catch(err => console.error("Lỗi load users status:", err));
-}
+        // --- TAB 5: GIÁM SÁT TÀI KHOẢN ---
+        function loadUsersStatusData() {
+            fetch(`${API_BASE}/api/admin/users-status`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('table-users-status');
+                    tbody.innerHTML = data.map(user => `
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
+                                <div class="small text-muted">@${user.username} <span class="badge bg-secondary">${user.role || 'customer'}</span></div>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark">${user.role || 'customer'}</span>
+                            </td>
+                            <td>
+                                <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
+                                <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
+                                    ${user.isOnline ? 'Online' : 'Offline'}
+                                </span>
+                            </td>
+                            <td class="small text-dark fw-bold">${formatFullDateTime(user.lastActive)}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(err => console.error("Lỗi load users status:", err));
+        }
+
+        // ===================================================
+        // [BỔ SUNG THÀNH CÔNG] JAVASCRIPT ĐIỀU PHỐI LUỒNG CHAT CHUYÊN NGHIỆP SOCKET.IO
+        // ===================================================
+        function loadAdminChatUserList() {
+            fetch(`${API_BASE}/api/admin/customer-stats`)
+            .then(res => res.json())
+            .then(users => {
+                const listContainer = document.getElementById("adminChatUserList");
+                listContainer.innerHTML = "";
+                
+                // Lọc bỏ tài khoản admin tối cao để tập trung phục vụ khách
+                const customers = users.filter(u => u.username !== 'admin');
+                
+                customers.forEach(cust => {
+                    const btn = document.createElement("button");
+                    // Kiểm tra tô màu mục Active thời gian thực
+                    const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
+                    btn.className = `list-group-item list-group-item-action d-flex flex-column border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+                    btn.innerHTML = `
+                        <span class="fw-bold text-truncate" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                        <span class="small text-muted mt-1" style="font-size:12px;">@${cust.username}</span>
+                    `;
+                    btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
+                    listContainer.appendChild(btn);
+                });
+            });
+        }
+
+        function selectUserToChat(username, fullName) {
+            currentSelectedUser = username;
+            
+            // UI Controller mở khoá các nút tương tác
+            document.getElementById("adminChatInput").disabled = false;
+            document.getElementById("adminSendBtn").disabled = false;
+            document.getElementById("adminChatHeaderTitle").innerHTML = `<i class="ti ti-headphone-alt text-warning me-2"></i> Đang kết nối hỗ trợ: <strong>${fullName}</strong> (@${username})`;
+            
+            // Ép cổng Socket Admin Join vào căn phòng biệt lập của User này
+            adminChatSocket.emit('join_room', username);
+            
+            // Chọc API bốc dỡ toàn bộ lịch sử trò chuyện cũ
+            fetch(`${API_BASE}/api/chat/history/${username}`)
+            .then(res => res.json())
+            .then(messages => {
+                const chatBody = document.getElementById("adminChatBody");
+                chatBody.innerHTML = ""; // Clear màn hình
+                messages.forEach(msg => appendAdminChatMessage(msg.sender, msg.text));
+                loadAdminChatUserList(); // Tải lại để đánh dấu Active menu bên trái
+            });
+        }
+
+        // Lắng nghe tín hiệu ngầm từ mạng gửi tin nhắn của User đổ sang phòng chat
+        adminChatSocket.on('receive_message', function(msg) {
+            if (msg.username === currentSelectedUser) {
+                appendAdminChatMessage(msg.sender, msg.text);
+            }
+        });
+
+        function sendAdminReply() {
+            const adminInput = document.getElementById("adminChatInput");
+            const textContent = adminInput.value.trim();
+            if (!textContent || !currentSelectedUser) return;
+
+            // Bắn tín nhắn phản hồi của admin đi qua WebSockets
+            adminChatSocket.emit('send_message', {
+                username: currentSelectedUser,
+                sender: 'admin',
+                text: textContent
+            });
+            adminInput.value = "";
+        }
+
+        function appendAdminChatMessage(sender, text) {
+            const chatBody = document.getElementById("adminChatBody");
+            const msgDiv = document.createElement("div");
+            
+            if (sender === 'admin') {
+                msgDiv.className = "admin-chat-msg admin text-white p-2 rounded-3 ms-auto bg-dark";
+                msgDiv.style.alignSelf = "flex-end";
+            } else {
+                msgDiv.className = "admin-chat-msg customer text-dark p-2 rounded-3 me-auto bg-warning";
+                msgDiv.style.alignSelf = "flex-start";
+            }
+            msgDiv.innerHTML = text;
+            chatBody.appendChild(msgDiv);
+            
+            // Tự cuộn chuột xuống đáy trang trò chuyện
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        document.getElementById("adminChatInput")?.addEventListener("keypress", function(e) {
+            if (e.key === 'Enter') sendAdminReply();
+        });
 
         function handleAdminLogout() {
             Swal.fire({
