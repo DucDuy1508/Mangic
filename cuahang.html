@@ -8,11 +8,11 @@
     <link rel="stylesheet" href="./assets/css/cuahang.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
     <link rel="stylesheet" href="./assets/font/fontawesome-free-6.6.0-web/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <title>Mangic - Cửa Hàng</title>
 </head>
 <body>
-    <header id="header">
+    <header id="header" class="">
         <div class="header-logo">
             <a href="index.html"><img src="./assets/img/logo.png" alt="Mangic Logo" class="logo-img"></a>
         </div>
@@ -23,104 +23,432 @@
             <li class="nav-item"><a href="index.html#services" class="nav-link">Dịch vụ</a></li>
             <li class="nav-item"><a href="index.html#blog" class="nav-link">Bài viết</a></li>
             <li class="nav-item"><a href="index.html#contact" class="nav-link">Liên hệ</a></li>
-            <li class="nav-item"><a href="lichsu.html" class="nav-link fw-bold text-warning"><i class="ti ti-package me-1"></i>Lịch sử đơn hàng</a></li>
         </ul>
         <div class="header-control d-flex align-items-center gap-3">
-            <a href="giohang.html" style="color: inherit;"><i class="header-control__icon ti ti-shopping-cart"></i></a>
+            <a href="giohang.html" style="color: inherit;">
+                <i class="header-control__icon ti ti-shopping-cart" style="cursor: pointer;"></i>
+            </a>
             <a href="lichsu.html" class="btn btn-warning btn-sm me-2 fw-bold text-dark shadow-sm">
                 <i class="ti ti-time me-1"></i> Lịch sử mua hàng
             </a>
             <a href="dangnhap.html" id="userLink" class="text-decoration-none d-flex align-items-center gap-1" style="color: #666;">
-                <i class="header-control__icon ti ti-user"></i> <span>Đăng nhập</span>
+                <i class="header-control__icon ti ti-user" style="margin-right: 2px;"></i>
+                <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">Đăng nhập</span>
             </a>
+
             <div id="userInfoBlock" class="d-flex align-items-center gap-2" style="display: none !important;">
-                <span id="welcomeName" class="fw-bold" style="color: #ffbc00;"></span>
-                <button id="btnLogout" class="btn btn-sm btn-outline-danger">Đăng xuất</button>
+                <span id="welcomeName" class="fw-bold" style="font-size: 14px; color: #ffbc00; letter-spacing: 0.3px;"></span>
+                <button id="btnLogout" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 12px; padding: 2px 8px;">Đăng xuất</button>
             </div>
         </div>
     </header>
 
-    <div id="shop-page" class="py-5">
-        <div class="container" id="product-list-container">
+    <div id="banner">
+        <div class="container">
+            <div class="row align-items-center justify-content-between">
+                <div class="banner-content col-lg-5 col-sm-12 mt-sm-12">
+                    <h3 class="banner-title">Mangic - Cửa hàng Manga</h3>
+                    <p class="banner-desc">
+                        Vũ trụ Manga & Game thu nhỏ ngay trong tầm tay bạn!
+                    </p>
+                </div>
+                <div class="banner-photo col-lg-7 col-sm-12">
+                    <img src="./assets/img/carousel.png" alt="" class="banner-img">
+                </div>
             </div>
-    </div>
-
-    <div id="chat-bubble" onclick="toggleChatBox()"><i class="ti ti-comment"></i></div>
-    <div id="chat-box-container">
-        <div class="chat-header">
-            <span><i class="ti ti-headphone-alt me-2"></i> Hỗ trợ Mangic Shop</span>
-            <button class="btn-close btn-close-white btn-sm" onclick="toggleChatBox()"></button>
-        </div>
-        <div class="chat-body d-flex flex-column gap-2" id="userChatBody"></div>
-        <div class="chat-footer">
-            <input type="text" id="userChatInput" class="form-control form-control-sm" placeholder="Nhập nội dung...">
-            <button class="btn btn-sm btn-dark px-3 fw-bold" onclick="sendUserMessage()">Gửi</button>
         </div>
     </div>
 
-    <style>
-        #chat-bubble { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: #1e1e2d; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; }
-        #chat-box-container { position: fixed; bottom: 95px; right: 25px; width: 350px; height: 450px; background: white; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 1000; border: 1px solid #e0e0e0; }
-        .chat-header { background: #1e1e2d; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
-        .chat-footer { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; }
-        .msg-box { padding: 8px 12px; border-radius: 15px; max-width: 75%; font-size: 14px; }
-        .msg-wrapper { display: flex; width: 100%; margin-bottom: 5px; }
-        .msg-wrapper.customer { justify-content: flex-end; }
-        .msg-wrapper.customer .msg-box { background: #ffbc00; color: black; }
-        .msg-wrapper.admin { justify-content: flex-start; }
-        .msg-wrapper.admin .msg-box { background: #e9ecef; color: black; }
-    </style>
+    <div id="shop-page" class="py-5">
+        <div class="container">
+            <div class="row">
+                <aside class="col-lg-3 col-md-4 mb-4">
+                    <div class="filter-wrapper p-4 shadow-sm rounded bg-light">
+                        <h5 class="mb-3">Tìm kiếm</h5>
+                        <div class="input-group mb-4">
+                            <input type="text" id="search-input" class="form-control" placeholder="Tìm tên truyện (vd: Dr. Stone)...">
+                            <button class="btn btn-dark" type="button" id="search-button">
+                                <i class="ti ti-search"></i>
+                            </button>
+                        </div>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+                        <h5 class="mb-3">Thể loại</h5>
+                        <div class="category-list">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="action">
+                                <label class="form-check-label" for="action">Action</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="adventure">
+                                <label class="form-check-label" for="adventure">Adventure</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="comedy">
+                                <label class="form-check-label" for="comedy">Comedy</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="drama">
+                                <label class="form-check-label" for="drama">Drama</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="fantasy">
+                                <label class="form-check-label" for="fantasy">Fantasy</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="magic">
+                                <label class="form-check-label" for="magic">Magic</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="romance">
+                                <label class="form-check-label" for="romance">Romance</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="isekai">
+                                <label class="form-check-label" for="isekai">Isekai</label>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <main class="col-lg-9 col-md-8">
+                    <div class="row g-4" id="product-list">
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000001" data-category="adventure comedy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-1.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Dr. Stone</div>
+                                    <div class="product-price">45,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000001', 'Dr. Stone', 45000, './assets/img/product-1.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000002" data-category="action magic">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-2.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Jujutsu Kaisen</div>
+                                    <div class="product-price">59,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000002', 'Jujutsu Kaisen', 59000, './assets/img/product-2.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000003" data-category="action comedy drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-3.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Spy x Family</div>
+                                    <div class="product-price">49,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000003', 'Spy x Family', 49000, './assets/img/product-3.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000004" data-category="action fantasy drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-4.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Gachiakuta</div>
+                                    <div class="product-price">59,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000004', 'Gachiakuta', 59000, './assets/img/product-4.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000005" data-category="action comedy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-5.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Dandadan</div>
+                                    <div class="product-price">69,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000005', 'Dandadan', 69000, './assets/img/product-5.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000006" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-6.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Konosuba</div>
+                                    <div class="product-price">65,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000006', 'Konosuba', 65000, './assets/img/product-6.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000007" data-category="drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-7.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Kakegurui</div>
+                                    <div class="product-price">72,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000007', 'Kakegurui', 72000, './assets/img/product-7.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000008" data-category="action comedy fantasy isekai">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-8.jpg" alt="" class="product-img">
+                                    </div>
+                                    <div class="product-name">Mairimashita! Iruma-kun</div>
+                                    <div class="product-price">36,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000008', 'Mairimashita! Iruma-kun', 36000, './assets/img/product-8.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000009" data-category="comedy romance">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-9.jpg" alt="Horimiya" class="product-img">
+                                    </div>
+                                    <div class="product-name">Hori-san to Miyamura-kun</div>
+                                    <div class="product-price">48,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000009', 'Hori-san to Miyamura-kun', 48000, './assets/img/product-9.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000010" data-category="action fantasy drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-11.jpg" alt="Jigokuraku" class="product-img">
+                                    </div>
+                                    <div class="product-name">Jigokuraku</div>
+                                    <div class="product-price">64,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000010', 'Jigokuraku', 64000, './assets/img/product-11.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000011" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-10.jpg" alt="Jibaku Shounen Hanako-kun" class="product-img">
+                                    </div>
+                                    <div class="product-name">Jibaku Shounen Hanako-kun</div>
+                                    <div class="product-price">55,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000011', 'Jibaku Shounen Hanako-kun', 55000, './assets/img/product-10.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000012" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-12.jpg" alt="DanMachi" class="product-img">
+                                    </div>
+                                    <div class="product-name">DanMachi</div>
+                                    <div class="product-price">59,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000012', 'DanMachi', 59000, './assets/img/product-12.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000013" data-category="action comedy fantasy">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-13.jpg" alt="Tomodachi Game" class="product-img">
+                                    </div>
+                                    <div class="product-name">Tomodachi Game</div>
+                                    <div class="product-price">68,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000013', 'Tomodachi Game', 68000, './assets/img/product-13.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000014" data-category="action comedy fantasy isekai">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-14.jpg" alt="Tensei Shitara Slime Datta Ken" class="product-img">
+                                    </div>
+                                    <div class="product-name">Tensei Shitara Slime Datta Ken</div>
+                                    <div class="product-price">70,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000014', 'Tensei Shitara Slime Datta Ken', 70000, './assets/img/product-14.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6 col-sm-6 product-item" data-id="000000000000000000000015" data-category="action drama">
+                            <div class="product-card">
+                                <a href="javascript:void(0)" class="text-decoration-none text-dark">
+                                    <div class="ratio-custom">
+                                        <img src="./assets/img/product-15.jpg" alt="Attack on Titan" class="product-img">
+                                    </div>
+                                    <div class="product-name">Attack on Titan</div>
+                                    <div class="product-price">36,000 VND</div>
+                                    <i class="product-icon ti ti-plus" onclick="event.stopPropagation(); addToCart('000000000000000000000015', 'Attack on Titan', 36000, './assets/img/product-15.jpg')"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+<!-- =================================================== -->
+<!-- KHỐI GIAO DIỆN BONG BÓNG CHAT REALTIME ĐỒNG BỘ ĐA TRANG -->
+<!-- =================================================== -->
+<div id="chat-bubble" onclick="toggleChatBox()"><i class="ti ti-comment"></i></div>
+
+<div id="chat-box-container">
+    <div class="chat-header">
+        <span><i class="ti ti-headphone-alt me-2"></i> Hỗ trợ Mangic Shop</span>
+        <button class="btn-close btn-close-white btn-sm" onclick="toggleChatBox()"></button>
+    </div>
+    <div class="chat-body d-flex flex-column gap-2" id="userChatBody"></div>
+    <div class="chat-footer">
+        <input type="text" id="userChatInput" class="form-control form-control-sm" placeholder="Nhập nội dung cần hỗ trợ...">
+        <button class="btn btn-sm btn-dark px-3 fw-bold" onclick="sendUserMessage()">Gửi</button>
+    </div>
+</div>
+
+<!-- Tải CSS Tùy biến hộp chat ẩn hiện mượt mà dính cứng góc phải màn hình -->
+<style>
+    #chat-bubble { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: #1e1e2d; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; transition: all 0.3s; }
+    #chat-bubble:hover { transform: scale(1.05); background: #ffbc00; color: #1e1e2d; }
+    #chat-box-container { position: fixed; bottom: 95px; right: 25px; width: 350px; height: 450px; background: white; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 1000; overflow: hidden; border: 1px solid #e0e0e0; transition: all 0.3s ease-in-out; }
+    .chat-header { background: #1e1e2d; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffbc00; }
+    .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8f9fa; display: flex; flex-column; gap: 10px; }
+    .chat-footer { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; background: white; }
+    
+    /* Style tin nhắn co giãn ôm khít text chữ chặn đứng lỗi cột đình */
+    .msg-box { padding: 8px 12px; border-radius: 15px; max-width: 75%; font-size: 14px; word-break: break-word; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .msg-wrapper { display: flex; w-100: 100%; mb-2: 2px; align-items: start; }
+    .msg-wrapper.customer { justify-content: flex-end; }
+    .msg-wrapper.customer .msg-box { background: #ffbc00; color: black; border-bottom-right-radius: 2px; }
+    .msg-wrapper.admin { justify-content: flex-start; }
+    .msg-wrapper.admin .msg-box { background: #e9ecef; color: black; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; }
+</style>
+
+<!-- Nhúng thư viện Socket.IO Client chính thức (Nếu trang nào có sẵn rồi thì bỏ dòng này nha) -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+    // Tự động nhận diện môi trường local/online để trỏ API chuẩn xác
+    const LOGIC_SERVER = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+        ? "http://localhost:5000"
+        : "https://mangic.onrender.com";
+        
+    let globalChatSocket;
+    const currentLoggedUser = JSON.parse(localStorage.getItem("currentUser"));
+
+    // Khởi động luồng lắng nghe ngầm đa trang khi phát hiện session đăng nhập
+    if (currentLoggedUser) {
+        // Đồng bộ cấu hình kết nối Polling để Render Cloud không chặn luồng chat
+        globalChatSocket = io(LOGIC_SERVER, {
+            transports: ['polling', 'websocket'],
+            withCredentials: true
+        });
+        
+        // Đăng ký quyền tham gia vào căn phòng biệt lập mang tên username của chính mình
+        globalChatSocket.emit('join_room', currentLoggedUser.username);
+
+        // Ngóng tin phản hồi Realtime từ Admin dội về bất thình lình khi đang lướt đa trang
+        globalChatSocket.on('receive_message', function(msg) {
+            appendUserPageChatMessage(msg.sender, msg.text);
+        });
+    }
+
+    // Cơ chế đóng mở hộp chat ma thuật
+    function toggleChatBox() {
+        if (!currentLoggedUser) {
+            Swal.fire('Yêu cầu định danh', 'Vui lòng đăng nhập tài khoản để kết nối với bộ phận hỗ trợ khách hàng!', 'warning');
+            return;
+        }
+        const chatBoxContainer = document.getElementById("chat-box-container");
+        if (chatBoxContainer.style.display === "none" || chatBoxContainer.style.display === "") {
+            chatBoxContainer.style.display = "flex";
+            syncUserChatHistory(); // Mở hộp chat ở bất kỳ trang nào -> Bốc dỡ đồng bộ lịch sử cũ ngay!
+        } else {
+            chatBoxContainer.style.display = "none";
+        }
+    }
+
+    // Hàm chọc API kéo lịch sử trò chuyện lưu vết từ MongoDB Atlas lên màn hình
+    function syncUserChatHistory() {
+        fetch(`${LOGIC_SERVER}/api/chat/history/${currentLoggedUser.username}`)
+            .then(res => res.json())
+            .then(messages => {
+                const chatBody = document.getElementById("userChatBody");
+                chatBody.innerHTML = ""; // Làm sạch khung hình tránh dính lặp tin nhắn
+                messages.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
+            })
+            .catch(err => console.error("Lỗi đồng bộ lịch sử đa trang:", err));
+    }
+
+    // Đóng gói dữ liệu bắn lên mây máy chủ thời gian thực
+    function sendUserMessage() {
+        const chatInput = document.getElementById("userChatInput");
+        const textContent = chatInput.value.trim();
+        if (!textContent) return;
+
+        // Truyền tin qua cổng socket
+        globalChatSocket.emit('send_message', {
+            username: currentLoggedUser.username,
+            sender: 'customer',
+            text: textContent
+        });
+        
+        chatInput.value = ""; // Clear thanh gõ
+    }
+
+    // Hàm vẽ bong bóng chat trái/phải ôm sát chữ chuẩn UX
+    function appendUserPageChatMessage(sender, text) {
+        const chatBody = document.getElementById("userChatBody");
+        if (!chatBody) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = `msg-wrapper ${sender}`;
+
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "msg-box";
+        msgDiv.innerHTML = text;
+
+        wrapper.appendChild(msgDiv);
+        chatBody.appendChild(wrapper);
+        
+        // Luôn cuộn chuột mượt xuống đáy cuộc trò chuyện mới nhất
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    // Bắt phím Enter gửi tin nhắn thần tốc
+    document.getElementById("userChatInput")?.addEventListener("keypress", function(e) {
+        if (e.key === 'Enter') {
+            sendUserMessage();
+        }
+    });
+</script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="./assets/Js/data.js"></script> 
     <script src="./assets/Js/app.js"></script>
-
-    <script>
-        const LOGIC_SERVER = window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
-        let globalChatSocket;
-        const currentLoggedUser = JSON.parse(localStorage.getItem("currentUser"));
-
-        if (currentLoggedUser) {
-            globalChatSocket = io(LOGIC_SERVER, { transports: ['polling', 'websocket'], withCredentials: true });
-            globalChatSocket.emit('join_room', currentLoggedUser.username);
-            globalChatSocket.on('receive_message', function(msg) { appendUserPageChatMessage(msg.sender, msg.text); });
-        }
-
-        function toggleChatBox() {
-            if (!currentLoggedUser) { Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning'); return; }
-            const chatBox = document.getElementById("chat-box-container");
-            chatBox.style.display = (chatBox.style.display === "flex") ? "none" : "flex";
-            if(chatBox.style.display === "flex") syncUserChatHistory();
-        }
-
-        function syncUserChatHistory() {
-            fetch(`${LOGIC_SERVER}/api/chat/history/${currentLoggedUser.username}`)
-            .then(res => res.json())
-            .then(messages => {
-                const body = document.getElementById("userChatBody");
-                body.innerHTML = "";
-                messages.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
-            });
-        }
-
-        function sendUserMessage() {
-            const input = document.getElementById("userChatInput");
-            if (!input.value.trim()) return;
-            globalChatSocket.emit('send_message', { username: currentLoggedUser.username, sender: 'customer', text: input.value.trim() });
-            input.value = "";
-        }
-
-        function appendUserPageChatMessage(sender, text) {
-            const body = document.getElementById("userChatBody");
-            const wrapper = document.createElement("div");
-            wrapper.className = `msg-wrapper ${sender}`;
-            wrapper.innerHTML = `<div class="msg-box">${text}</div>`;
-            body.appendChild(wrapper);
-            body.scrollTop = body.scrollHeight;
-        }
-    </script>
 </body>
 </html>
