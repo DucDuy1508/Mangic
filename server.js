@@ -670,40 +670,25 @@ const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); /
 // [SỬA ĐOẠN API AI-CHAT NÀY]
 app.post('/api/ai-chat', async (req, res) => {
     try {
-        // 1. Lọc sạch message: Loại bỏ tất cả ký tự không phải ASCII để chắc chắn không bị ByteString
         let { message } = req.body;
-        if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
-        
-        // Dùng replace để loại bỏ các ký tự gây lỗi (Unicode/Emoji)
+        // 1. Lọc sạch ký tự lạ ngay đầu vào
         const cleanMessage = String(message).replace(/[^\x00-\x7F]/g, "");
 
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
-            generationConfig: { temperature: 0.7 } 
-        });
+        // 2. Khởi tạo prompt bằng các đoạn ghép nối, không dán nguyên khối
+        const p1 = "Ban la nhan vien tu van cua cua hang truyen tranh Mangic.";
+        const p2 = " Danh sach truyen: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.";
+        const p3 = " Quy tac: Khong tra loi cau hoi ngoai le. Luon than thien.";
+        const prompt = p1 + p2 + p3 + " Khach hang hoi: " + cleanMessage;
 
-        const prompt = `Ban la nhan vien tu van cua cua hang truyen tranh Mangic.
-Danh sach truyen dang ban: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
-
-QUY TAC BAT BUOC:
-1. CHI DUOC PHEP tra loi cau hoi lien quan den truyen tranh, tu van chon truyen, hoac thong tin cua hang Mangic.
-2. NEU khach hoi ngoai le (chuyen phiem, tinh cam, xa hoi...), HAY TRA LOI: "Xin loi, Mangic chi ho tro tu van cac bo truyen tranh tai cua hang thoi a. Ban co muon minh goi y truyen nao khong?".
-3. KHONG DUOC PHEP tra loi thong tin ngoai danh sach tren.
-4. Luon giu thai do than thien, ngan gon.
-
-Khach hang hoi: "${cleanMessage}"`; // Dùng biến đã làm sạch ở đây
-
-        // Sử dụng phương thức gửi request an toàn hơn
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
-        
         const response = await result.response;
-        // Kiểm tra nếu response không có nội dung thì trả về mặc định
-        const text = response.text() || "AI không trả lời, thử lại sau nhé!";
         
-        res.json({ reply: text });
+        res.json({ reply: response.text() });
     } catch (error) {
-        console.error("Lỗi AI:", error);
-        res.status(500).json({ reply: "Lỗi kết nối AI: " + error.message });
+        // Nếu vẫn lỗi, gửi lỗi ra console nhưng trả về text an toàn cho client
+        console.error("LOI HE THONG:", error);
+        res.status(500).json({ reply: "He thong dang ban, thu lai sau nhe!" });
     }
 });
 // ==========================================
