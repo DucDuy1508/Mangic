@@ -311,7 +311,139 @@
             </div>
         </div>
     </div>
+<!-- =================================================== -->
+<!-- KHỐI GIAO DIỆN BONG BÓNG CHAT REALTIME ĐỒNG BỘ ĐA TRANG -->
+<!-- =================================================== -->
+<div id="chat-bubble" onclick="toggleChatBox()"><i class="ti ti-comment"></i></div>
 
+<div id="chat-box-container">
+    <div class="chat-header">
+        <span><i class="ti ti-headphone-alt me-2"></i> Hỗ trợ Mangic Shop</span>
+        <button class="btn-close btn-close-white btn-sm" onclick="toggleChatBox()"></button>
+    </div>
+    <div class="chat-body d-flex flex-column gap-2" id="userChatBody"></div>
+    <div class="chat-footer">
+        <input type="text" id="userChatInput" class="form-control form-control-sm" placeholder="Nhập nội dung cần hỗ trợ...">
+        <button class="btn btn-sm btn-dark px-3 fw-bold" onclick="sendUserMessage()">Gửi</button>
+    </div>
+</div>
+
+<!-- Tải CSS Tùy biến hộp chat ẩn hiện mượt mà dính cứng góc phải màn hình -->
+<style>
+    #chat-bubble { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: #1e1e2d; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; transition: all 0.3s; }
+    #chat-bubble:hover { transform: scale(1.05); background: #ffbc00; color: #1e1e2d; }
+    #chat-box-container { position: fixed; bottom: 95px; right: 25px; width: 350px; height: 450px; background: white; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 1000; overflow: hidden; border: 1px solid #e0e0e0; transition: all 0.3s ease-in-out; }
+    .chat-header { background: #1e1e2d; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffbc00; }
+    .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8f9fa; display: flex; flex-column; gap: 10px; }
+    .chat-footer { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; background: white; }
+    
+    /* Style tin nhắn co giãn ôm khít text chữ chặn đứng lỗi cột đình */
+    .msg-box { padding: 8px 12px; border-radius: 15px; max-width: 75%; font-size: 14px; word-break: break-word; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .msg-wrapper { display: flex; w-100: 100%; mb-2: 2px; align-items: start; }
+    .msg-wrapper.customer { justify-content: flex-end; }
+    .msg-wrapper.customer .msg-box { background: #ffbc00; color: black; border-bottom-right-radius: 2px; }
+    .msg-wrapper.admin { justify-content: flex-start; }
+    .msg-wrapper.admin .msg-box { background: #e9ecef; color: black; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; }
+</style>
+
+<!-- Nhúng thư viện Socket.IO Client chính thức (Nếu trang nào có sẵn rồi thì bỏ dòng này nha) -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+    // Tự động nhận diện môi trường local/online để trỏ API chuẩn xác
+    const LOGIC_SERVER = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+        ? "http://localhost:5000"
+        : "https://mangic.onrender.com";
+        
+    let globalChatSocket;
+    const currentLoggedUser = JSON.parse(localStorage.getItem("currentUser"));
+
+    // Khởi động luồng lắng nghe ngầm đa trang khi phát hiện session đăng nhập
+    if (currentLoggedUser) {
+        // Đồng bộ cấu hình kết nối Polling để Render Cloud không chặn luồng chat
+        globalChatSocket = io(LOGIC_SERVER, {
+            transports: ['polling', 'websocket'],
+            withCredentials: true
+        });
+        
+        // Đăng ký quyền tham gia vào căn phòng biệt lập mang tên username của chính mình
+        globalChatSocket.emit('join_room', currentLoggedUser.username);
+
+        // Ngóng tin phản hồi Realtime từ Admin dội về bất thình lình khi đang lướt đa trang
+        globalChatSocket.on('receive_message', function(msg) {
+            appendUserPageChatMessage(msg.sender, msg.text);
+        });
+    }
+
+    // Cơ chế đóng mở hộp chat ma thuật
+    function toggleChatBox() {
+        if (!currentLoggedUser) {
+            Swal.fire('Yêu cầu định danh', 'Vui lòng đăng nhập tài khoản để kết nối với bộ phận hỗ trợ khách hàng!', 'warning');
+            return;
+        }
+        const chatBoxContainer = document.getElementById("chat-box-container");
+        if (chatBoxContainer.style.display === "none" || chatBoxContainer.style.display === "") {
+            chatBoxContainer.style.display = "flex";
+            syncUserChatHistory(); // Mở hộp chat ở bất kỳ trang nào -> Bốc dỡ đồng bộ lịch sử cũ ngay!
+        } else {
+            chatBoxContainer.style.display = "none";
+        }
+    }
+
+    // Hàm chọc API kéo lịch sử trò chuyện lưu vết từ MongoDB Atlas lên màn hình
+    function syncUserChatHistory() {
+        fetch(`${LOGIC_SERVER}/api/chat/history/${currentLoggedUser.username}`)
+            .then(res => res.json())
+            .then(messages => {
+                const chatBody = document.getElementById("userChatBody");
+                chatBody.innerHTML = ""; // Làm sạch khung hình tránh dính lặp tin nhắn
+                messages.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
+            })
+            .catch(err => console.error("Lỗi đồng bộ lịch sử đa trang:", err));
+    }
+
+    // Đóng gói dữ liệu bắn lên mây máy chủ thời gian thực
+    function sendUserMessage() {
+        const chatInput = document.getElementById("userChatInput");
+        const textContent = chatInput.value.trim();
+        if (!textContent) return;
+
+        // Truyền tin qua cổng socket
+        globalChatSocket.emit('send_message', {
+            username: currentLoggedUser.username,
+            sender: 'customer',
+            text: textContent
+        });
+        
+        chatInput.value = ""; // Clear thanh gõ
+    }
+
+    // Hàm vẽ bong bóng chat trái/phải ôm sát chữ chuẩn UX
+    function appendUserPageChatMessage(sender, text) {
+        const chatBody = document.getElementById("userChatBody");
+        if (!chatBody) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = `msg-wrapper ${sender}`;
+
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "msg-box";
+        msgDiv.innerHTML = text;
+
+        wrapper.appendChild(msgDiv);
+        chatBody.appendChild(wrapper);
+        
+        // Luôn cuộn chuột mượt xuống đáy cuộc trò chuyện mới nhất
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    // Bắt phím Enter gửi tin nhắn thần tốc
+    document.getElementById("userChatInput")?.addEventListener("keypress", function(e) {
+        if (e.key === 'Enter') {
+            sendUserMessage();
+        }
+    });
+</script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="./assets/Js/data.js"></script> 
