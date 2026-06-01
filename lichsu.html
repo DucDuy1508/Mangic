@@ -40,8 +40,7 @@
             </div>
         </div>
     </div>
-<!-- MODAL ĐÁNH GIÁ ĐƠN HÀNG -->
-    <div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-dark text-white">
@@ -51,11 +50,11 @@
                 <div class="modal-body text-center p-4">
                     <h6 class="fw-bold mb-3">Bạn cảm thấy sản phẩm và dịch vụ thế nào?</h6>
                     <div id="star-rating-container" class="mb-3 fs-1" style="cursor: pointer; user-select: none;">
-                        <span class="star-btn text-muted" data-val="1">☆</span>
-                        <span class="star-btn text-muted" data-val="2">☆</span>
-                        <span class="star-btn text-muted" data-val="3">☆</span>
-                        <span class="star-btn text-muted" data-val="4">☆</span>
-                        <span class="star-btn text-muted" data-val="5">☆</span>
+                        <span class="star-btn text-muted" data-val="1" onclick="setRating(1)">☆</span>
+                        <span class="star-btn text-muted" data-val="2" onclick="setRating(2)">☆</span>
+                        <span class="star-btn text-muted" data-val="3" onclick="setRating(3)">☆</span>
+                        <span class="star-btn text-muted" data-val="4" onclick="setRating(4)">☆</span>
+                        <span class="star-btn text-muted" data-val="5" onclick="setRating(5)">☆</span>
                     </div>
                     <input type="hidden" id="rv-rating" value="0">
                     <input type="hidden" id="rv-orderId" value="">
@@ -536,6 +535,60 @@
                     });
                 }
             });
+        }
+        // --- CÁC HÀM XỬ LÝ SỰ KIỆN ĐÁNH GIÁ ---
+        function openReviewModal(orderId, orderCode) {
+            document.getElementById('rv-orderId').value = orderId;
+            document.getElementById('rv-orderCode').innerText = "#" + orderCode;
+            document.getElementById('rv-rating').value = 0;
+            document.getElementById('rv-text').value = "";
+            
+            // Reset sao về màu xám
+            document.querySelectorAll('.star-btn').forEach(s => { 
+                s.innerText = '☆'; 
+                s.classList.remove('text-warning'); 
+                s.classList.add('text-muted'); 
+            });
+            
+            // Mở Modal lên
+            new bootstrap.Modal(document.getElementById('reviewModal')).show();
+        }
+
+        // Logic tô màu 5 sao vàng
+        function setRating(val) {
+            document.getElementById('rv-rating').value = val;
+            document.querySelectorAll('.star-btn').forEach(s => {
+                if (parseInt(s.getAttribute('data-val')) <= val) {
+                    s.innerText = '★'; 
+                    s.classList.add('text-warning'); 
+                    s.classList.remove('text-muted');
+                } else {
+                    s.innerText = '☆'; 
+                    s.classList.remove('text-warning'); 
+                    s.classList.add('text-muted');
+                }
+            });
+        }
+
+        function submitOrderReview() {
+            const orderId = document.getElementById('rv-orderId').value;
+            const rating = document.getElementById('rv-rating').value;
+            const reviewText = document.getElementById('rv-text').value.trim();
+
+            if (rating == 0) {
+                return Swal.fire('Lưu ý', 'Vui lòng chọn số sao để đánh giá!', 'warning');
+            }
+
+            fetch(`${API_URL}/api/orders/${orderId}/review`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating, reviewText })
+            })
+            .then(res => res.json())
+            .then(data => {
+                Swal.fire('Cảm ơn bạn!', data.message, 'success').then(() => window.location.reload());
+            })
+            .catch(err => Swal.fire('Lỗi', 'Không thể gửi đánh giá lúc này', 'error'));
         }
     </script>
 </body>

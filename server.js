@@ -81,7 +81,9 @@ const OrderSchema = new mongoose.Schema({
     orderStatus: { type: String, default: 'Chờ xử lý' },      
     paymentStatus: { type: String, default: 'Chờ thanh toán' }, 
     orderCode: { type: String, required: true },    
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    rating: { type: Number, default: 0 },
+    reviewText: { type: String, default: "" }
 });
 const Order = mongoose.model('Order', OrderSchema);
 
@@ -307,6 +309,33 @@ app.put('/api/orders/:id/cancel', async (req, res) => {
     }
 });
 
+// API XỬ LÝ LƯU ĐÁNH GIÁ CỦA KHÁCH HÀNG
+app.put('/api/orders/:id/review', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rating, reviewText } = req.body;
+        
+        const order = await Order.findById(id);
+        if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hàng!" });
+        
+        // Cập nhật sao và nội dung
+        order.rating = Number(rating);
+        order.reviewText = reviewText;
+        await order.save();
+        
+        // (Tùy chọn) Ghi log hệ thống
+        const reviewLog = new UserActivity({
+            username: order.username,
+            action: "Đánh giá đơn hàng",
+            details: `Khách đã đánh giá ${rating} sao cho đơn ${order.orderCode}.`
+        });
+        await reviewLog.save();
+
+        res.json({ message: "Cảm ơn bạn đã đánh giá đơn hàng!" });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi hệ thống khi lưu đánh giá!" });
+    }
+});
 // --- [API MỚI: BỐC LẠI LỊCH SỬ TIN NHẮN CŨ KHI USER/ADMIN REFRESH TRANG] ---
 app.get('/api/chat/history/:username', async (req, res) => {
     try {
