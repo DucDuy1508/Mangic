@@ -667,20 +667,30 @@ io.on('connection', (socket) => {
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); // Lấy key ở aistudio.google.com
 
+// [SỬA ĐOẠN API AI-CHAT NÀY]
 app.post('/api/ai-chat', async (req, res) => {
     try {
         const { message } = req.body;
+        
+        // Kiểm tra xem message có tồn tại không
+        if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
+
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Truyền context shop vào để AI tư vấn đúng sản phẩm của ông
         const prompt = `Bạn là nhân viên tư vấn của cửa hàng truyện tranh Mangic. 
-        Dưới đây là danh sách truyện shop đang bán: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
-        Khách hàng hỏi: "${message}". Hãy tư vấn dựa trên danh sách này một cách thân thiện.`;
+        Danh sách truyện shop đang bán: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
+        Khách hàng hỏi: "${message}". Hãy tư vấn ngắn gọn, thân thiện và chỉ tập trung vào các bộ truyện trong danh sách trên.`;
 
         const result = await model.generateContent(prompt);
-        res.json({ reply: result.response.text() });
+        
+        // CÁCH LẤY TEXT AN TOÀN HƠN
+        const response = await result.response;
+        const text = response.text(); 
+
+        res.json({ reply: text });
     } catch (error) {
-        res.status(500).json({ error: "AI đang bận, thử lại sau nhé!" });
+        console.error("Lỗi AI:", error);
+        res.status(500).json({ reply: "AI đang bận, thử lại sau nhé!" });
     }
 });
 // ==========================================

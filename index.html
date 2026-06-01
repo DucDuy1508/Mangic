@@ -463,7 +463,7 @@
         chatSocket = io(CHAT_SERVER, { transports: ['polling', 'websocket'], withCredentials: true });
         chatSocket.emit('join_room', loggedUser.username);
         
-        // 🔥 FIX LỖI NHÂN ĐÔI: Gỡ bỏ sự kiện cũ trước khi gán sự kiện mới
+        // FIX LỖI NHÂN ĐÔI: Gỡ bỏ sự kiện cũ trước khi gán sự kiện mới
         chatSocket.off('receive_message').on('receive_message', function(msg) {
             if (currentMode === 'admin') appendUserPageChatMessage(msg.sender, msg.text);
         });
@@ -484,35 +484,33 @@
 
     // 3. Hàm gửi tin nhắn
     async function sendUserMessage() {
-        const input = document.getElementById("userChatInput");
-        const text = input.value.trim();
-        if (!text) return;
-        input.value = "";
+    const input = document.getElementById("userChatInput");
+    const text = input.value.trim();
+    if (!text) return;
 
-        if (currentMode === 'admin') {
-            if (chatSocket && chatSocket.connected) {
-                chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
-            } else {
-                Swal.fire('Lỗi', 'Kết nối bị gián đoạn!', 'error');
-            }
-        } else {
-    // Gửi cho AI
-    try {
-        const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
-        });
-        const data = await res.json();
-        
-        // 🔥 FIX: Kiểm tra xem data.reply có tồn tại không trước khi vẽ
-        const aiResponse = data.reply || "AI không trả lời, kiểm tra lại server nhé!";
-        appendUserPageChatMessage('admin', aiResponse); 
-    } catch (err) {
-        appendUserPageChatMessage('admin', "Lỗi kết nối AI!");
+    // 1. VẼ TIN NHẮN CỦA CHÍNH MÌNH NGAY LẬP TỨC
+    appendUserPageChatMessage('customer', text); 
+    input.value = "";
+
+    // 2. Xử lý logic
+    if (currentMode === 'admin') {
+        // ... (code gửi socket)
+    } else {
+        try {
+            const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
+            
+            // 3. VẼ TIN CỦA AI TRẢ VỀ
+            appendUserPageChatMessage('admin', data.reply);
+        } catch (err) {
+            appendUserPageChatMessage('admin', "AI không phản hồi, check terminal nhé!");
+        }
     }
 }
-    }
 
     // 4. Các hàm hỗ trợ
     function toggleChatBox() {
@@ -533,7 +531,7 @@
             });
     }
 
-    // 🔥 FIX LỖI VỊ TRÍ: Ép class và Style trực tiếp để đảm bảo bên phải/trái
+    // FIX LỖI VỊ TRÍ: Ép class và Style trực tiếp để đảm bảo bên phải/trái
     function appendUserPageChatMessage(sender, text) {
     if (!text) return; // Không vẽ nếu text trống
 
