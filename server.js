@@ -670,25 +670,31 @@ const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); /
 // [SỬA ĐOẠN API AI-CHAT NÀY]
 app.post('/api/ai-chat', async (req, res) => {
     try {
-        let { message } = req.body;
-        // 1. Lọc sạch ký tự lạ ngay đầu vào
-        const cleanMessage = String(message).replace(/[^\x00-\x7F]/g, "");
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ reply: "Ban chua nhap cau hoi!" });
 
-        // 2. Khởi tạo prompt bằng các đoạn ghép nối, không dán nguyên khối
-        const p1 = "Ban la nhan vien tu van cua cua hang truyen tranh Mangic.";
-        const p2 = " Danh sach truyen: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.";
-        const p3 = " Quy tac: Khong tra loi cau hoi ngoai le. Luon than thien.";
-        const prompt = p1 + p2 + p3 + " Khach hang hoi: " + cleanMessage;
+        const apiKey = process.env.GOOGLE_API_KEY;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        const promptData = {
+            contents: [{ parts: [{ text: `Bạn là nhân viên tư vấn cho cửa hàng truyện tranh Mangic. Danh sách truyện: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan. Quy tắc: Chỉ tư vấn truyện tranh, luôn dùng tiếng Việt có dấu, thân thiện. Khách hỏi: ${message}` }] }]
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(promptData)
+        });
+
+        const data = await response.json();
         
-        res.json({ reply: response.text() });
+        // Trích xuất text từ response chuẩn của Google
+        const replyText = data.candidates[0].content.parts[0].text;
+        res.json({ reply: replyText });
+
     } catch (error) {
-        // Nếu vẫn lỗi, gửi lỗi ra console nhưng trả về text an toàn cho client
-        console.error("LOI HE THONG:", error);
-        res.status(500).json({ reply: "He thong dang ban, thu lai sau nhe!" });
+        console.error("Lỗi:", error);
+        res.status(500).json({ reply: "Hệ thống đang bận, thử lại sau nhé!" });
     }
 });
 // ==========================================
