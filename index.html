@@ -487,8 +487,6 @@
         const input = document.getElementById("userChatInput");
         const text = input.value.trim();
         if (!text) return;
-
-        appendUserPageChatMessage('customer', text); 
         input.value = "";
 
         if (currentMode === 'admin') {
