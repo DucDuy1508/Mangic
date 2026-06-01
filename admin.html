@@ -680,85 +680,85 @@
 
         // 1. LẮNG NGHE TÍN HIỆU TIN NHẮN REALTIME TỪ PHÍA KHÁCH HÀNG GỬI ĐẾN
         adminChatSocket.on('receive_message', function(msg) {
-            if (msg.sender === 'customer') {
-                // Nếu admin đang KHÔNG mở khung chat của người này -> Tăng số đếm chưa đọc cục bộ
-                if (msg.username !== currentSelectedUser) {
-                    unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
-                } else {
-                    unreadCounts[msg.username] = 0;
+    if (msg.sender === 'customer') {
+        if (msg.username !== currentSelectedUser) {
+            unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
+        } else {
+            unreadCounts[msg.username] = 0;
+        }
+        
+        activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
+        activeUsersOrder.unshift(msg.username); 
+        
+        // 🔥 ÉP CẬP NHẬT GIAO DIỆN NGAY LẬP TỨC KHÔNG CẦN CHỜ REFRESH
+        updateSidebarTotalBadge();
+        loadAdminChatUserList();
+    }
+    
+    if (msg.username === currentSelectedUser) {
+        appendAdminChatMessage(msg.sender, msg.text);
+    }
+});
+
+       // =================================================================
+// 2. HÀM SINH DANH SÁCH CHAT - ĐÃ FIX DỨT ĐIỂM: ĐẾM SỐ TIN MỚI TỪ DATABASE ONLINE
+// =================================================================
+function loadAdminChatUserList() {
+    fetch(`${API_BASE}/api/admin/customer-stats`)
+    .then(res => res.json())
+    .then(users => {
+        const listContainer = document.getElementById("adminChatUserList");
+        if (!listContainer) return;
+        listContainer.innerHTML = "";
+        
+        const customers = users.filter(u => u.username !== 'admin');
+        
+        // Khớp logic xếp hàng đợi ưu tiên
+        const orderedCustomers = [...customers].sort((a, b) => {
+            const indexA = activeUsersOrder.indexOf(a.username);
+            const indexB = activeUsersOrder.indexOf(b.username);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return 0;
+        });
+        
+        orderedCustomers.forEach(cust => {
+            const btn = document.createElement("button");
+            const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
+            
+            // 🔥 GIẢI PHÁP ĐÁM MÂY: Chọc lên DB lấy lịch sử chat để đếm chính xác số tin nhắn chưa đọc
+            fetch(`${API_BASE}/api/chat/history/${cust.username}`)
+            .then(res => res.json())
+            .then(messages => {
+                // Đếm xem người này có bao nhiêu tin nhắn mới (sender là customer) kể từ lần admin xem cuối
+                const userUnreadCount = unreadCounts[cust.username] || 0;
+                let userBadgeHtml = "";
+                
+                if (userUnreadCount > 0) {
+                    userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
                 }
                 
-                // Thuật toán đẩy hàng đợi: Đẩy user vừa nhắn tin lên top 1 danh sách bên trái
-                activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
-                activeUsersOrder.unshift(msg.username); 
-                
-                // Đồng bộ cập nhật đồng loạt các badge số lượng chưa đọc trên màn hình quản trị
-                updateSidebarTotalBadge();
-                loadAdminChatUserList();
-            }
-            
-            // Nếu phòng chat của khách hàng này đang được mở -> Dán text lên UI lập tức
-            if (msg.username === currentSelectedUser) {
-                appendAdminChatMessage(msg.sender, msg.text);
-            }
-        });
-
-        // 2. HÀM SINH DANH SÁCH HÀNG CHỜ CHAT VÀ NỔ SỐ BADGE ĐỎ TỪNG KHÁCH
-        function loadAdminChatUserList() {
-            fetch(`${API_BASE}/api/admin/customer-stats`)
-            .then(res => res.json())
-            .then(users => {
-                const listContainer = document.getElementById("adminChatUserList");
-                if (!listContainer) return;
-                listContainer.innerHTML = "";
-                
-                const customers = users.filter(u => u.username !== 'admin');
-                
-                // Thuật toán xếp hạng: Ưu tiên đẩy những User có tin nhắn chưa đọc hoặc nằm trong hàng đợi activeUsersOrder lên top đầu
-                const orderedCustomers = [...customers].sort((a, b) => {
-                    const unreadA = unreadCounts[a.username] || 0;
-                    const unreadB = unreadCounts[b.username] || 0;
-                    if (unreadA !== unreadB) return unreadB - unreadA; // Ai có tin chưa đọc xếp trước
-                    
-                    const indexA = activeUsersOrder.indexOf(a.username);
-                    const indexB = activeUsersOrder.indexOf(b.username);
-                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    if (indexA !== -1) return -1;
-                    if (indexB !== -1) return 1;
-                    return 0;
-                });
-                
-                orderedCustomers.forEach(cust => {
-                    const btn = document.createElement("button");
-                    const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
-                    
-                    const userUnreadCount = unreadCounts[cust.username] || 0;
-                    let userBadgeHtml = "";
-                    
-                    // NỔ SỐ TIN NHẮN MỚI TỪNG KHÁCH: Sinh badge đỏ rực bên vế phải nếu có tin chưa đọc
-                    if (userUnreadCount > 0) {
-                        userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
-                    }
-                    
-                    btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
-                    btn.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <div class="text-start text-truncate" style="max-width: 65%;">
-                                <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
-                                <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
-                            </div>
-                            <div class="text-end">
-                                ${userBadgeHtml}
-                            </div>
+                btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+                btn.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div class="text-start text-truncate" style="max-width: 65%;">
+                            <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                            <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
                         </div>
-                    `;
-                    
-                    btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
-                    listContainer.appendChild(btn);
-                });
-            })
-            .catch(err => console.error("Lỗi đồng bộ danh sách chat:", err));
-        }
+                        <div class="text-end" id="badge-realtime-${cust.username}">
+                            ${userBadgeHtml}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
+            listContainer.appendChild(btn);
+        });
+    })
+    .catch(err => console.error("Lỗi đồng bộ danh sách chat:", err));
+}
 
         // 3. KHI ADMIN BẤM TIẾP NHẬN HỖ TRỢ KHÁCH HÀNG
         function selectUserToChat(username, fullName) {
@@ -786,24 +786,23 @@
 
         // 4. LỆNH PHÁT TIN NHẮN PHẢN HỒI CỦA ADMIN VÀ TỰ ĐỘNG ĐẨY TOP 1 LÊN ĐẦU DANH SÁCH
         function sendAdminReply() {
-            const adminInput = document.getElementById("adminChatInput");
-            const textContent = adminInput.value.trim();
-            if (!textContent || !currentSelectedUser) return;
+    const adminInput = document.getElementById("adminChatInput");
+    const textContent = adminInput.value.trim();
+    if (!textContent || !currentSelectedUser) return;
 
-            // 🌟 YÊU CẦU MỚI THÀNH CÔNG: Đẩy cuộc hội thoại hiện tại lên vị trí đầu tiên của hàng đợi khi Admin chat
-            activeUsersOrder = activeUsersOrder.filter(u => u !== currentSelectedUser);
-            activeUsersOrder.unshift(currentSelectedUser);
+    // Đẩy cuộc hội thoại hiện tại lên vị trí đầu tiên của hàng đợi khi Admin chat
+    activeUsersOrder = activeUsersOrder.filter(u => u !== currentSelectedUser);
+    activeUsersOrder.unshift(currentSelectedUser);
 
-            // Bắn gói tin phản hồi của admin đi qua kênh mạng WebSockets
-            adminChatSocket.emit('send_message', {
-                username: currentSelectedUser,
-                sender: 'admin',
-                text: textContent
-            });
-            
-            adminInput.value = "";
-            loadAdminChatUserList(); // Gọi render lại danh sách để đưa tài khoản này lên vị trí top 1 ngay lập tức!
-        }
+    adminChatSocket.emit('send_message', {
+        username: currentSelectedUser,
+        sender: 'admin',
+        text: textContent
+    });
+    
+    adminInput.value = "";
+    loadAdminChatUserList(); // Cập nhật lại giao diện đẩy top ngay 1 giây!
+}
 
         // 5. HÀM SỬA DỨT ĐIỂM LỖI HÌNH HỌC (CỘT ĐÌNH & DÀN HÀNG NGANG CHUẨN UX)
         function appendAdminChatMessage(sender, text) {
