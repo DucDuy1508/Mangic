@@ -670,17 +670,19 @@ const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); /
 // [SỬA ĐOẠN API AI-CHAT NÀY]
 app.post('/api/ai-chat', async (req, res) => {
     try {
-        const { message } = req.body;
+        // 1. Lọc sạch message: Loại bỏ tất cả ký tự không phải ASCII để chắc chắn không bị ByteString
+        let { message } = req.body;
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
+        
+        // Dùng replace để loại bỏ các ký tự gây lỗi (Unicode/Emoji)
+        const cleanMessage = String(message).replace(/[^\x00-\x7F]/g, "");
 
         const model = genAI.getGenerativeModel({ 
             model: "gemini-1.5-flash",
-            // Thêm cấu hình này để AI tập trung và giảm thiểu metadata không cần thiết
             generationConfig: { temperature: 0.7 } 
         });
 
-        // Tối ưu prompt: Loại bỏ các ký tự đặc biệt có thể gây lỗi Header
-        const prompt = `Bạn là nhân viên tư vấn cho cua hang truyen tranh Mangic.
+        const prompt = `Ban la nhan vien tu van cua cua hang truyen tranh Mangic.
 Danh sach truyen dang ban: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
 
 QUY TAC BAT BUOC:
@@ -689,19 +691,19 @@ QUY TAC BAT BUOC:
 3. KHONG DUOC PHEP tra loi thong tin ngoai danh sach tren.
 4. Luon giu thai do than thien, ngan gon.
 
-Khach hang hoi: "${message}"`;
+Khach hang hoi: "${cleanMessage}"`; // Dùng biến đã làm sạch ở đây
 
-        // Sử dụng một mảng các phần nội dung (Content) để ổn định hơn
-        const result = await model.generateContent([{ text: prompt }]);
+        // Sử dụng phương thức gửi request an toàn hơn
+        const result = await model.generateContent(prompt);
         
         const response = await result.response;
-        const text = response.text(); 
+        // Kiểm tra nếu response không có nội dung thì trả về mặc định
+        const text = response.text() || "AI không trả lời, thử lại sau nhé!";
         
         res.json({ reply: text });
     } catch (error) {
         console.error("Lỗi AI:", error);
-        // Trả về nội dung lỗi để ông dễ debug trên giao diện
-        res.status(500).json({ reply: "AI đang gặp lỗi kỹ thuật!" });
+        res.status(500).json({ reply: "Lỗi kết nối AI: " + error.message });
     }
 });
 // ==========================================
