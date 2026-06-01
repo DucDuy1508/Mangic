@@ -676,8 +676,9 @@ app.post('/api/ai-chat', async (req, res) => {
         const apiKey = process.env.GOOGLE_API_KEY;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
+        // Đảm bảo không để ký tự lạ
         const promptData = {
-            contents: [{ parts: [{ text: `Bạn là nhân viên tư vấn cho cửa hàng truyện tranh Mangic. Danh sách truyện: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan. Quy tắc: Chỉ tư vấn truyện tranh, luôn dùng tiếng Việt có dấu, thân thiện. Khách hỏi: ${message}` }] }]
+            contents: [{ parts: [{ text: "Tu van cho cua hang truyen tranh Mangic. Danh sach truyen: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan. Khach hoi: " + message }] }]
         };
 
         const response = await fetch(url, {
@@ -688,13 +689,17 @@ app.post('/api/ai-chat', async (req, res) => {
 
         const data = await response.json();
         
-        // Trích xuất text từ response chuẩn của Google
+        // KIỂM TRA LỖI TRẢ VỀ TỪ GOOGLE
+        if (data.error) {
+            return res.status(500).json({ reply: "Loi Google: " + data.error.message });
+        }
+
         const replyText = data.candidates[0].content.parts[0].text;
         res.json({ reply: replyText });
 
     } catch (error) {
-        console.error("Lỗi:", error);
-        res.status(500).json({ reply: "Hệ thống đang bận, thử lại sau nhé!" });
+        // TRẢ VỀ LỖI CHI TIẾT
+        res.status(500).json({ reply: "Loi Server: " + error.message });
     }
 });
 // ==========================================
