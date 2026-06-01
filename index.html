@@ -450,143 +450,109 @@
     <script src="./assets/Js/data.js"></script> 
     <script src="./assets/Js/app.js"></script>
 
-    <script>
-        // Cấu hình đồng bộ môi trường tự động trỏ API chuẩn chỉ
-        const CHAT_SERVER = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
-            ? "http://localhost:5000"
-            : "https://mangic.onrender.com";
-            
-        let chatSocket;
-        const loggedUser = JSON.parse(localStorage.getItem("currentUser"));
-
-        // Kích hoạt luồng lắng nghe ngầm nếu phát hiện tài khoản đã đăng nhập
-        // 🔥 ĐÃ SỬA: Ép cấu hình HTTP Polling giúp Client thông suốt đường truyền với Render Cloud
-if (loggedUser) {
-    chatSocket = io(CHAT_SERVER, {
-        transports: ['polling', 'websocket'],
-        withCredentials: true
-    });
+<script>
+    const CHAT_SERVER = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
+        ? "http://localhost:5000" : "https://mangic.onrender.com";
     
-    // Ép Client tham gia vào căn phòng định danh riêng tư của họ trên máy chủ
-    chatSocket.emit('join_room', loggedUser.username);
+    let chatSocket;
+    const loggedUser = JSON.parse(localStorage.getItem("currentUser"));
+    let currentMode = 'admin'; 
 
-    // Bắt sự kiện nổ tin nhắn Realtime từ phía Admin dội về bất thình lình
-    chatSocket.on('receive_message', function(msg) {
-        appendChatMessage(msg.sender, msg.text);
-    });
-}
-
-        // Ẩn hiện hộp thoại khi nhấp chuột vào bong bóng phù thủy
-        function toggleChatBox() {
-            if (!loggedUser) {
-                Swal.fire('Yêu cầu định danh', 'Vui lòng đăng nhập tài khoản để kết nối với bộ phận hỗ trợ khách hàng!', 'warning');
-                return;
-            }
-            const chatBox = document.getElementById("chat-box-container");
-            if (chatBox.style.display === "none" || chatBox.style.display === "") {
-                chatBox.style.display = "flex";
-                loadChatRoomHistory(); // Lật mở khung chat -> Đổ lại dữ liệu cũ lập tức
-            } else {
-                chatBox.style.display = "none";
-            }
-        }
-
-        // Hàm bốc dỡ lịch sử chat lưu vết trong MongoDB Atlas tránh mất dữ liệu khi F5
-        function loadChatRoomHistory() {
-            fetch(`${CHAT_SERVER}/api/chat/history/${loggedUser.username}`)
-                .then(res => res.json())
-                .then(messages => {
-                    const chatBody = document.getElementById("userChatBody");
-                    chatBody.innerHTML = ""; // Làm sạch khung hình
-                    messages.forEach(msg => appendChatMessage(msg.sender, msg.text));
-                })
-                .catch(err => console.error("Lỗi đồng bộ lịch sử hội thoại:", err));
-        }
-
-        // Tiến trình đóng gói và bắn tin nhắn lên mây máy chủ thời gian thực
-        function sendUserMessage() {
-            const chatInput = document.getElementById("userChatInput");
-            const textContent = chatInput.value.trim();
-            if (!textContent) return;
-
-            // Phát lệnh truyền tải gói tin nhắn qua giao thức mạng WebSockets
-            chatSocket.emit('send_message', {
-                username: loggedUser.username,
-                sender: 'customer',
-                text: textContent
-            });
-            
-            chatInput.value = ""; // Đưa thanh gõ về trạng thái trống
-        }
-
-        // Hàm phụ trợ sinh thẻ HTML vẽ tin nhắn lên màn hình trực quan
-        function appendChatMessage(sender, text) {
-            const chatBody = document.getElementById("userChatBody");
-            const msgDiv = document.createElement("div");
-            msgDiv.className = `msg-box ${sender}`;
-            msgDiv.innerHTML = text;
-            chatBody.appendChild(msgDiv);
-            
-            // Tự động cuộn chuột khít xuống đáy hội thoại bảo đảm trải nghiệm UI mượt mà
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
-
-        // Tiện ích: Gõ phím Enter để gửi tin nhắn lập tức
-        document.getElementById("userChatInput")?.addEventListener("keypress", function(e) {
-            if (e.key === 'Enter') {
-                sendUserMessage();
-            }
+    // 1. Khởi tạo và xử lý sự kiện Socket
+    if (loggedUser) {
+        chatSocket = io(CHAT_SERVER, { transports: ['polling', 'websocket'], withCredentials: true });
+        chatSocket.emit('join_room', loggedUser.username);
+        
+        // 🔥 FIX LỖI NHÂN ĐÔI: Gỡ bỏ sự kiện cũ trước khi gán sự kiện mới
+        chatSocket.off('receive_message').on('receive_message', function(msg) {
+            if (currentMode === 'admin') appendUserPageChatMessage(msg.sender, msg.text);
         });
-        let currentMode = 'admin'; // Mặc định là chat với Admin
-
-function setChatMode(mode) {
-    currentMode = mode;
-    const body = document.getElementById("userChatBody");
-    body.innerHTML = ""; // Xóa tin cũ để hiển thị đúng chế độ
-
-    if (mode === 'admin') {
-        // Nếu chuyển về Admin, tải lại lịch sử từ MongoDB để admin/user tiếp tục chat
-        syncUserChatHistory(); 
-    } else {
-        // Nếu chuyển sang AI, chỉ hiện thông báo chào
-        body.innerHTML = `<div class="text-center small text-muted my-2">Đang ở chế độ AI Tư vấn Manga</div>`;
     }
-}
 
-// Sửa lại hàm sendUserMessage để phân luồng
-async function sendUserMessage() {
-    const input = document.getElementById("userChatInput");
-    const text = input.value.trim();
-    if (!text) return;
+    // 2. Chuyển Tab (Fix lỗi mất lịch sử)
+    function setChatMode(mode) {
+        currentMode = mode;
+        const body = document.getElementById("userChatBody");
+        body.innerHTML = ""; 
 
-    appendUserPageChatMessage('customer', text); // Hiện tin mình vừa gửi
-    input.value = "";
-
-    if (currentMode === 'admin') {
-        if (globalChatSocket && globalChatSocket.connected) {
-            globalChatSocket.emit('send_message', {
-                username: currentLoggedUser.username,
-                sender: 'customer',
-                text: text
-            });
+        if (mode === 'admin') {
+            syncUserChatHistory(); 
         } else {
-            Swal.fire('Lỗi', 'Mất kết nối với Admin, vui lòng tải lại trang!', 'error');
-        }
-    } else {
-        // AI Tư vấn
-        try {
-            const response = await fetch(`${LOGIC_SERVER}/api/ai-chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await response.json();
-            appendUserPageChatMessage('ai', data.reply);
-        } catch (err) {
-            appendUserPageChatMessage('ai', "AI đang bận, thử lại sau nhé!");
+            body.innerHTML = `<div class="text-center small text-muted my-2">Đang tư vấn bởi AI...</div>`;
         }
     }
-}
-    </script>
+
+    // 3. Hàm gửi tin nhắn
+    async function sendUserMessage() {
+        const input = document.getElementById("userChatInput");
+        const text = input.value.trim();
+        if (!text) return;
+
+        appendUserPageChatMessage('customer', text); 
+        input.value = "";
+
+        if (currentMode === 'admin') {
+            if (chatSocket && chatSocket.connected) {
+                chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
+            } else {
+                Swal.fire('Lỗi', 'Kết nối bị gián đoạn!', 'error');
+            }
+        } else {
+            try {
+                const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                appendUserPageChatMessage('admin', data.reply);
+            } catch (err) {
+                appendUserPageChatMessage('admin', "AI đang bận, thử lại sau!");
+            }
+        }
+    }
+
+    // 4. Các hàm hỗ trợ
+    function toggleChatBox() {
+        if (!loggedUser) { Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning'); return; }
+        const box = document.getElementById("chat-box-container");
+        box.style.display = (box.style.display === "flex") ? "none" : "flex";
+        if(box.style.display === "flex") syncUserChatHistory();
+    }
+
+    function syncUserChatHistory() {
+        if (!loggedUser) return;
+        fetch(`${CHAT_SERVER}/api/chat/history/${loggedUser.username}`)
+            .then(res => res.json())
+            .then(msgs => {
+                const body = document.getElementById("userChatBody");
+                body.innerHTML = "";
+                msgs.forEach(m => appendUserPageChatMessage(m.sender, m.text));
+            });
+    }
+
+    // 🔥 FIX LỖI VỊ TRÍ: Ép class và Style trực tiếp để đảm bảo bên phải/trái
+    function appendUserPageChatMessage(sender, text) {
+        const body = document.getElementById("userChatBody");
+        const wrapper = document.createElement("div");
+        
+        // Dùng class msg-wrapper để quản lý flex
+        wrapper.className = `msg-wrapper ${sender}`;
+        wrapper.style.display = "flex";
+        wrapper.style.width = "100%";
+        wrapper.style.marginBottom = "10px";
+        wrapper.style.justifyContent = (sender === 'customer') ? "flex-end" : "flex-start";
+
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `msg-box ${sender}`;
+        msgDiv.innerText = text;
+        
+        wrapper.appendChild(msgDiv);
+        body.appendChild(wrapper);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    document.getElementById("userChatInput")?.addEventListener("keypress", (e) => { if (e.key === 'Enter') sendUserMessage(); });
+</script>
 </body>
 </html>
