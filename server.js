@@ -674,7 +674,7 @@ app.post('/api/ai-chat', async (req, res) => {
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
         // Dùng thư viện chính chủ, nó tự tìm Model phù hợp nhất
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
         const prompt = `Bạn là nhân viên tư vấn cho cửa hàng truyện tranh Mangic. 
         Danh sách truyện: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan. 
