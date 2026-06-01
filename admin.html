@@ -254,7 +254,7 @@
                         <div class="card-header bg-dark text-white fw-bold py-3" id="adminChatHeaderTitle">
                             <i class="ti ti-comments me-2"></i> Vui lòng chọn một khách hàng để tiếp nhận hỗ trợ
                         </div>
-                        <div class="card-body bg-light overflow-y-auto d-flex flex-direction-column gap-2" id="adminChatBody" style="flex: 1; padding: 20px;"></div>
+                        <div class="card-body bg-light overflow-y-auto d-flex flex-column gap-2" id="adminChatBody" style="flex: 1; padding: 20px;"></div>
                         <div class="card-footer bg-white p-3 d-flex gap-2 border-top">
                             <input type="text" id="adminChatInput" class="form-control" placeholder="Nhập nội dung phản hồi Admin..." disabled>
                             <button class="btn btn-dark fw-bold px-4" id="adminSendBtn" onclick="sendAdminReply()" disabled>Gửi</button>
@@ -311,15 +311,16 @@
         const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
         let analyticsChartInstance = null;
         let userPieChartInstance = null;
-        // 🔥 ĐÃ SỬA ĐỒNG BỘ CLOUD: Cấu hình ép HTTP Polling giúp luồng Socket chạy mượt mà trên Render Free không bị chặn
-let adminChatSocket = io(API_BASE, {
-    transports: ['polling', 'websocket'],
-    withCredentials: true
-});
+        
+        // Cấu hình ép chế độ HTTP Polling bắt buộc giúp luồng Socket chạy mượt mà xuyên suốt trên Render đám mây
+        let adminChatSocket = io(API_BASE, {
+            transports: ['polling', 'websocket'],
+            withCredentials: true
+        });
         
         let currentSelectedUser = "";        
-        let unreadCounts = {};               // Quản lý lưu trữ đếm số lượng tin chưa đọc từng người: { dduy: 1 }
-        let activeUsersOrder = [];           // Hàng đợi quản lý ưu tiên bay lên đầu khi có tin nhắn
+        let unreadCounts = {};               // Object theo dõi lưu trữ số lượng tin chưa đọc
+        let activeUsersOrder = [];           // Hàng đợi quản lý ưu tiên bay lên đầu danh sách
 
         document.getElementById('cp-startdate').value = new Date().toISOString().split('T')[0];
 
@@ -674,13 +675,13 @@ let adminChatSocket = io(API_BASE, {
         }
 
         // =================================================================
-        // 🔥 ĐÃ NÂNG CẤP TOÀN DIỆN: ĐIỀU PHỐI TIN NHẮN REALTIME CHỐNG LỖI UI & BẮT BADGE ĐẾM
+        // KÊNH ĐIỀU PHỐI TIN NHẮN REALTIME SOCKET ĐÃ FIX TRIỆT ĐỂ LỖI KẾT NỐI
         // =================================================================
         
-        // 1. Lắng nghe tín hiệu nổ tin nhắn Realtime ngầm ngầm qua socket
+        // Lắng nghe tín hiệu ngầm từ mạng gửi tin nhắn của User đổ sang phòng chat
         adminChatSocket.on('receive_message', function(msg) {
             if (msg.sender === 'customer') {
-                // Nếu không mở đúng phòng chat người này -> Tăng số tin chưa đọc riêng của user lên
+                // Nếu đang đóng khung chat người này -> Tăng số đếm cục bộ tin nhắn chưa đọc
                 if (msg.username !== currentSelectedUser) {
                     unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
                 }
@@ -689,7 +690,7 @@ let adminChatSocket = io(API_BASE, {
                 activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
                 activeUsersOrder.unshift(msg.username); 
                 
-                // Render lại danh sách hàng chờ và số đếm Sidebar menu
+                // Trực tiếp gọi hàm vẽ lại để cập nhật Badge đỏ Realtime tức khắc
                 updateSidebarTotalBadge();
                 loadAdminChatUserList();
             }
@@ -700,91 +701,79 @@ let adminChatSocket = io(API_BASE, {
             }
         });
 
-        // 2. Hàm sinh danh sách hàng chờ bốc từ CRM stats
         function loadAdminChatUserList() {
-    fetch(`${API_BASE}/api/admin/customer-stats`)
-    .then(res => res.json())
-    .then(users => {
-        const listContainer = document.getElementById("adminChatUserList");
-        listContainer.innerHTML = "";
-        
-        const customers = users.filter(u => u.username !== 'admin');
-        
-        // Khớp logic ưu tiên: Khách hàng nào có tin nhắn mới luôn được đẩy lên đầu hàng
-        const orderedCustomers = [...customers].sort((a, b) => {
-            const indexA = activeUsersOrder.indexOf(a.username);
-            const indexB = activeUsersOrder.indexOf(b.username);
-            
-            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-            if (indexA !== -1) return -1;
-            if (indexB !== -1) return 1;
-            return 0;
-        });
-        
-        orderedCustomers.forEach(cust => {
-            const btn = document.createElement("button");
-            const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
-            
-            // Tính toán số lượng tin nhắn chưa đọc của riêng user này
-            const userUnreadCount = unreadCounts[cust.username] || 0;
-            let userBadgeHtml = "";
-            
-            // Nếu có tin nhắn mới -> Tạo badge màu đỏ ghim bên phải khung tên
-            if (userUnreadCount > 0) {
-                userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
-            }
-            
-            btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
-            
-            // Thiết kế layout d-flex cấu trúc 2 vế: Vế trái là Tên/User, Vế phải là Badge số tin mới
-            btn.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="text-start text-truncate" style="max-width: 70%;">
-                        <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
-                        <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
-                    </div>
-                    <div class="text-end">
-                        ${userBadgeHtml}
-                    </div>
-                </div>
-            `;
-            
-            btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
-            listContainer.appendChild(btn);
-        });
-    })
-    .catch(err => console.error("Lỗi đồng bộ danh sách hàng chờ chat:", err));
-}
+            fetch(`${API_BASE}/api/admin/customer-stats`)
+            .then(res => res.json())
+            .then(users => {
+                const listContainer = document.getElementById("adminChatUserList");
+                listContainer.innerHTML = "";
+                
+                const customers = users.filter(u => u.username !== 'admin');
+                
+                // Xếp hạng ưu tiên hàng chờ chat dựa trên activeUsersOrder
+                const orderedCustomers = [...customers].sort((a, b) => {
+                    const indexA = activeUsersOrder.indexOf(a.username);
+                    const indexB = activeUsersOrder.indexOf(b.username);
+                    
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    return 0;
+                });
+                
+                orderedCustomers.forEach(cust => {
+                    const btn = document.createElement("button");
+                    const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
+                    
+                    // Tính toán và dán badge đếm số lượng tin nhắn riêng lẻ chưa đọc
+                    const userUnreadCount = unreadCounts[cust.username] || 0;
+                    let userBadgeHtml = "";
+                    
+                    if (userUnreadCount > 0) {
+                        userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
+                    }
+                    
+                    btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+                    btn.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="text-start text-truncate" style="max-width: 70%;">
+                                <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                                <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
+                            </div>
+                            <div class="text-end">
+                                ${userBadgeHtml}
+                            </div>
+                        </div>
+                    `;
+                    btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
+                    listContainer.appendChild(btn);
+                });
+            });
+        }
 
-        // 3. Khi Admin bấm chọn tiếp nhận hỗ trợ một khách hàng cụ thể
         function selectUserToChat(username, fullName) {
             currentSelectedUser = username;
             
-            // Xóa sạch số lượng tin chưa đọc của người này vì Admin đã tiếp nhận xử lý
+            // Làm sạch số lượng tin chưa đọc của người này khi admin mở xem
             unreadCounts[username] = 0;
-            updateSidebarTotalBadge(); // Đồng bộ số đếm tổng trên Sidebar trái
+            updateSidebarTotalBadge(); 
             
-            // UI Controller mở khóa các cổng gõ phím
             document.getElementById("adminChatInput").disabled = false;
             document.getElementById("adminSendBtn").disabled = false;
             document.getElementById("adminChatHeaderTitle").innerHTML = `<i class="ti ti-headphone-alt text-warning me-2"></i> Đang kết nối hỗ trợ: <strong>${fullName}</strong> (@${username})`;
             
-            // Ép Admin Join vào căn phòng biệt lập WebSockets của User này
             adminChatSocket.emit('join_room', username);
             
-            // Bốc dỡ lịch sử tin nhắn lưu trữ từ MongoDB Atlas đổ lên khung hình
             fetch(`${API_BASE}/api/chat/history/${username}`)
             .then(res => res.json())
             .then(messages => {
                 const chatBody = document.getElementById("adminChatBody");
                 chatBody.innerHTML = ""; 
                 messages.forEach(msg => appendAdminChatMessage(msg.sender, msg.text));
-                loadAdminChatUserList(); // Gọi lại để xóa sạch bóng chữ đỏ đếm tin của user này
-            })
-            .catch(err => console.error("Lỗi đồng bộ lịch sử hội thoại CRM:", err));
+                loadAdminChatUserList(); // Gọi lại để làm sạch huy hiệu đỏ danh sách giữa
+            });
         }
 
-        // 4. Lệnh phát tin nhắn phản hồi của Admin
         function sendAdminReply() {
             const adminInput = document.getElementById("adminChatInput");
             const textContent = adminInput.value.trim();
@@ -798,36 +787,30 @@ let adminChatSocket = io(API_BASE, {
             adminInput.value = "";
         }
 
-        // 5. 🔥 ĐÃ SỬA TUYỆT ĐỐI LỖI UI: Hàm render chia luồng bong bóng tin nhắn khít khao trái phải và co giãn dọc
         function appendAdminChatMessage(sender, text) {
-    const chatBody = document.getElementById("adminChatBody");
-    const wrapperDiv = document.createElement("div");
-    
-    // 🔥 ĐÃ VÁ: Thêm "align-items-start" để tin nhắn co lại theo nội dung chữ, không bị kéo giãn dọc!
-    wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
-    
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "admin-chat-msg p-2 rounded-3";
-    msgDiv.innerHTML = text;
-    
-    if (sender === 'admin') {
-        // Admin gửi -> Đẩy dính lề PHẢI, nền màu Đen, chữ Trắng
-        wrapperDiv.className += " justify-content-end";
-        msgDiv.className += " bg-dark text-white text-end";
-    } else {
-        // Khách hàng gửi -> Đẩy dính lề TRÁI, nền màu VÀNG, chữ Đen
-        wrapperDiv.className += " justify-content-start";
-        msgDiv.className += " bg-warning text-dark text-start";
-    }
-    
-    wrapperDiv.appendChild(msgDiv);
-    chatBody.appendChild(wrapperDiv);
-    
-    // Tự cuộn chuột trượt mượt xuống đáy trang trò chuyện
-    chatBody.scrollTop = chatBody.scrollHeight;
-}
+            const chatBody = document.getElementById("adminChatBody");
+            const wrapperDiv = document.createElement("div");
+            
+            // Giao thức d-flex kết hợp "align-items-start" bóp gọn chiều dọc bong bóng ôm khít văn bản chữ
+            wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
+            
+            const msgDiv = document.createElement("div");
+            msgDiv.className = "admin-chat-msg p-2 rounded-3";
+            msgDiv.innerHTML = text;
+            
+            if (sender === 'admin') {
+                wrapperDiv.className += " justify-content-end";
+                msgDiv.className += " bg-dark text-white text-end";
+            } else {
+                wrapperDiv.className += " justify-content-start";
+                msgDiv.className += " bg-warning text-dark text-start";
+            }
+            
+            wrapperDiv.appendChild(msgDiv);
+            chatBody.appendChild(wrapperDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
 
-        // 6. Hàm đồng bộ tổng số lượng tin nhắn chưa đọc lên Sidebar menu
         function updateSidebarTotalBadge() {
             let totalUnreadSum = 0;
             for (let user in unreadCounts) {
@@ -838,9 +821,9 @@ let adminChatSocket = io(API_BASE, {
             if (totalBadgeElement) {
                 if (totalUnreadSum > 0) {
                     totalBadgeElement.innerText = totalUnreadSum;
-                    totalBadgeElement.style.display = "inline-block"; // Bung hiện badge đỏ rực
+                    totalBadgeElement.style.display = "inline-block"; 
                 } else {
-                    totalBadgeElement.style.display = "none"; // Ẩn biến mất nếu bằng 0
+                    totalBadgeElement.style.display = "none"; 
                 }
             }
         }

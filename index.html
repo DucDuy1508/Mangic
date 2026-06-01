@@ -449,17 +449,21 @@
         const loggedUser = JSON.parse(localStorage.getItem("currentUser"));
 
         // Kích hoạt luồng lắng nghe ngầm nếu phát hiện tài khoản đã đăng nhập
-        if (loggedUser) {
-            chatSocket = io(CHAT_SERVER);
-            
-            // Ép Client tham gia vào căn phòng định danh riêng tư của họ trên máy chủ
-            chatSocket.emit('join_room', loggedUser.username);
+        // 🔥 ĐÃ SỬA: Ép cấu hình HTTP Polling giúp Client thông suốt đường truyền với Render Cloud
+if (loggedUser) {
+    chatSocket = io(CHAT_SERVER, {
+        transports: ['polling', 'websocket'],
+        withCredentials: true
+    });
+    
+    // Ép Client tham gia vào căn phòng định danh riêng tư của họ trên máy chủ
+    chatSocket.emit('join_room', loggedUser.username);
 
-            // Bắt sự kiện nổ tin nhắn Realtime từ phía Admin dội về bất thình lình
-            chatSocket.on('receive_message', function(msg) {
-                appendChatMessage(msg.sender, msg.text);
-            });
-        }
+    // Bắt sự kiện nổ tin nhắn Realtime từ phía Admin dội về bất thình lình
+    chatSocket.on('receive_message', function(msg) {
+        appendChatMessage(msg.sender, msg.text);
+    });
+}
 
         // Ẩn hiện hộp thoại khi nhấp chuột vào bong bóng phù thủy
         function toggleChatBox() {
