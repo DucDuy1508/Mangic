@@ -673,24 +673,26 @@ app.post('/api/ai-chat', async (req, res) => {
         const { message } = req.body;
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            // Thêm cấu hình này để AI tập trung và giảm thiểu metadata không cần thiết
+            generationConfig: { temperature: 0.7 } 
+        });
 
-        // Prompt này bao gồm cả quy tắc và câu hỏi của khách
-        const prompt = `
-Bạn là nhân viên tư vấn khách hàng cho cửa hàng truyện tranh Mangic.
-DANH SÁCH TRUYỆN ĐANG BÁN: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
+        // Tối ưu prompt: Loại bỏ các ký tự đặc biệt có thể gây lỗi Header
+        const prompt = `Bạn là nhân viên tư vấn cho cua hang truyen tranh Mangic.
+Danh sach truyen dang ban: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
 
-QUY TẮC BẮT BUỘC:
-1. CHỈ ĐƯỢC PHÉP trả lời các câu hỏi liên quan đến truyện tranh, tư vấn chọn truyện, hoặc thông tin cửa hàng Mangic.
-2. NẾU khách hỏi ngoài lề (chuyện phiếm, tình cảm, xã hội, toán học, lịch sử...), HÃY TRẢ LỜI: "Xin lỗi, Mangic chỉ hỗ trợ tư vấn các bộ truyện tranh tại cửa hàng thôi ạ. Bạn có muốn mình gợi ý truyện nào không?".
-3. KHÔNG ĐƯỢC PHÉP trả lời các thông tin không có trong danh sách trên.
-4. Luôn giữ thái độ thân thiện, ngắn gọn và dùng các từ ngữ đặc trưng của fan Manga.
+QUY TAC BAT BUOC:
+1. CHI DUOC PHEP tra loi cau hoi lien quan den truyen tranh, tu van chon truyen, hoac thong tin cua hang Mangic.
+2. NEU khach hoi ngoai le (chuyen phiem, tinh cam, xa hoi...), HAY TRA LOI: "Xin loi, Mangic chi ho tro tu van cac bo truyen tranh tai cua hang thoi a. Ban co muon minh goi y truyen nao khong?".
+3. KHONG DUOC PHEP tra loi thong tin ngoai danh sach tren.
+4. Luon giu thai do than thien, ngan gon.
 
-Khách hàng hỏi: "${message}"
-`;
+Khach hang hoi: "${message}"`;
 
-        // TRUYỀN BIẾN PROMPT VÀO ĐÂY
-        const result = await model.generateContent(prompt);
+        // Sử dụng một mảng các phần nội dung (Content) để ổn định hơn
+        const result = await model.generateContent([{ text: prompt }]);
         
         const response = await result.response;
         const text = response.text(); 
@@ -698,7 +700,8 @@ Khách hàng hỏi: "${message}"
         res.json({ reply: text });
     } catch (error) {
         console.error("Lỗi AI:", error);
-        res.status(500).json({ reply: "AI hiện đang lỗi!" });
+        // Trả về nội dung lỗi để ông dễ debug trên giao diện
+        res.status(500).json({ reply: "AI đang gặp lỗi kỹ thuật!" });
     }
 });
 // ==========================================
