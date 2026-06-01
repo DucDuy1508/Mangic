@@ -671,26 +671,34 @@ const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); /
 app.post('/api/ai-chat', async (req, res) => {
     try {
         const { message } = req.body;
-        
-        // Kiểm tra xem message có tồn tại không
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const prompt = `Bạn là nhân viên tư vấn của cửa hàng truyện tranh Mangic. 
-        Danh sách truyện shop đang bán: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
-        Khách hàng hỏi: "${message}". Hãy tư vấn ngắn gọn, thân thiện và chỉ tập trung vào các bộ truyện trong danh sách trên.`;
+        // Prompt này bao gồm cả quy tắc và câu hỏi của khách
+        const prompt = `
+Bạn là nhân viên tư vấn khách hàng cho cửa hàng truyện tranh Mangic.
+DANH SÁCH TRUYỆN ĐANG BÁN: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
 
+QUY TẮC BẮT BUỘC:
+1. CHỈ ĐƯỢC PHÉP trả lời các câu hỏi liên quan đến truyện tranh, tư vấn chọn truyện, hoặc thông tin cửa hàng Mangic.
+2. NẾU khách hỏi ngoài lề (chuyện phiếm, tình cảm, xã hội, toán học, lịch sử...), HÃY TRẢ LỜI: "Xin lỗi, Mangic chỉ hỗ trợ tư vấn các bộ truyện tranh tại cửa hàng thôi ạ. Bạn có muốn mình gợi ý truyện nào không?".
+3. KHÔNG ĐƯỢC PHÉP trả lời các thông tin không có trong danh sách trên.
+4. Luôn giữ thái độ thân thiện, ngắn gọn và dùng các từ ngữ đặc trưng của fan Manga.
+
+Khách hàng hỏi: "${message}"
+`;
+
+        // TRUYỀN BIẾN PROMPT VÀO ĐÂY
         const result = await model.generateContent(prompt);
         
-        // CÁCH LẤY TEXT AN TOÀN HƠN
         const response = await result.response;
         const text = response.text(); 
-
+        
         res.json({ reply: text });
     } catch (error) {
         console.error("Lỗi AI:", error);
-        res.status(500).json({ reply: "AI đang bận, thử lại sau nhé!" });
+        res.status(500).json({ reply: "AI hiện đang lỗi!" });
     }
 });
 // ==========================================

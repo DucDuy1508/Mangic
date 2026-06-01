@@ -451,77 +451,69 @@
     <script src="./assets/Js/app.js"></script>
 
 <script>
-    const CHAT_SERVER = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
-        ? "http://localhost:5000" : "https://mangic.onrender.com";
-    
+    const CHAT_SERVER = window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
     let chatSocket;
     const loggedUser = JSON.parse(localStorage.getItem("currentUser"));
     let currentMode = 'admin'; 
 
-    // 1. Khởi tạo và xử lý sự kiện Socket
+    // Bộ nhớ tạm để lưu tin nhắn AI khi chuyển tab
+    let aiHistory = []; 
+
     if (loggedUser) {
         chatSocket = io(CHAT_SERVER, { transports: ['polling', 'websocket'], withCredentials: true });
         chatSocket.emit('join_room', loggedUser.username);
-        
-        // FIX LỖI NHÂN ĐÔI: Gỡ bỏ sự kiện cũ trước khi gán sự kiện mới
-        chatSocket.off('receive_message').on('receive_message', function(msg) {
+        chatSocket.on('receive_message', (msg) => {
             if (currentMode === 'admin') appendUserPageChatMessage(msg.sender, msg.text);
         });
     }
 
-    // 2. Chuyển Tab (Fix lỗi mất lịch sử)
     function setChatMode(mode) {
         currentMode = mode;
         const body = document.getElementById("userChatBody");
         body.innerHTML = ""; 
 
         if (mode === 'admin') {
-            syncUserChatHistory(); 
+            syncUserChatHistory();
         } else {
-            body.innerHTML = `<div class="text-center small text-muted my-2">Đang tư vấn bởi AI...</div>`;
+            // Hiển thị lại lịch sử AI đã lưu trong bộ nhớ tạm
+            aiHistory.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
         }
     }
 
-    // 3. Hàm gửi tin nhắn
     async function sendUserMessage() {
-    const input = document.getElementById("userChatInput");
-    const text = input.value.trim();
-    if (!text) return;
+        const input = document.getElementById("userChatInput");
+        const text = input.value.trim();
+        if (!text) return;
 
-    // 1. VẼ TIN NHẮN CỦA CHÍNH MÌNH NGAY LẬP TỨC
-    appendUserPageChatMessage('customer', text); 
-    input.value = "";
+        appendUserPageChatMessage('customer', text);
+        input.value = "";
 
-    // 2. Xử lý logic
-    if (currentMode === 'admin') {
-        // ... (code gửi socket)
-    } else {
-        try {
-            const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await res.json();
+        if (currentMode === 'admin') {
+            chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
+        } else {
+            // Lưu tin khách vào bộ nhớ AI
+            aiHistory.push({ sender: 'customer', text: text });
             
-            // 3. VẼ TIN CỦA AI TRẢ VỀ
-            appendUserPageChatMessage('admin', data.reply);
-        } catch (err) {
-            appendUserPageChatMessage('admin', "AI không phản hồi, check terminal nhé!");
+            try {
+                const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                
+                // Lưu tin AI vào bộ nhớ AI
+                const reply = data.reply || "AI đang bận!";
+                aiHistory.push({ sender: 'admin', text: reply }); // Dùng admin class để nó hiện bên trái
+                appendUserPageChatMessage('admin', reply);
+            } catch (err) {
+                appendUserPageChatMessage('admin', "Lỗi kết nối AI!");
+            }
         }
     }
-}
 
-    // 4. Các hàm hỗ trợ
-    function toggleChatBox() {
-        if (!loggedUser) { Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning'); return; }
-        const box = document.getElementById("chat-box-container");
-        box.style.display = (box.style.display === "flex") ? "none" : "flex";
-        if(box.style.display === "flex") syncUserChatHistory();
-    }
-
+    // Các hàm phụ trợ
     function syncUserChatHistory() {
-        if (!loggedUser) return;
         fetch(`${CHAT_SERVER}/api/chat/history/${loggedUser.username}`)
             .then(res => res.json())
             .then(msgs => {
@@ -531,27 +523,16 @@
             });
     }
 
-    // FIX LỖI VỊ TRÍ: Ép class và Style trực tiếp để đảm bảo bên phải/trái
     function appendUserPageChatMessage(sender, text) {
-    if (!text) return; // Không vẽ nếu text trống
-
-    const body = document.getElementById("userChatBody");
-    const wrapper = document.createElement("div");
-    
-    wrapper.className = `msg-wrapper ${sender}`;
-    wrapper.style.display = "flex";
-    wrapper.style.justifyContent = (sender === 'customer') ? "flex-end" : "flex-start";
-
-    const msgDiv = document.createElement("div");
-    msgDiv.className = `msg-box ${sender}`;
-    msgDiv.innerText = text; // Dùng innerText cho an toàn
-    
-    wrapper.appendChild(msgDiv);
-    body.appendChild(wrapper);
-    body.scrollTop = body.scrollHeight;
-}
-
-    document.getElementById("userChatInput")?.addEventListener("keypress", (e) => { if (e.key === 'Enter') sendUserMessage(); });
+        const body = document.getElementById("userChatBody");
+        const wrapper = document.createElement("div");
+        wrapper.className = `msg-wrapper ${sender}`;
+        wrapper.style.display = "flex";
+        wrapper.style.justifyContent = (sender === 'customer') ? "flex-end" : "flex-start";
+        wrapper.innerHTML = `<div class="msg-box ${sender}">${text}</div>`;
+        body.appendChild(wrapper);
+        body.scrollTop = body.scrollHeight;
+    }
 </script>
 </body>
 </html>
