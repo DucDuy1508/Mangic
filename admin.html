@@ -700,8 +700,8 @@
     }
 });
 
-       // =================================================================
-// 2. HÀM SINH DANH SÁCH CHAT - ĐÃ FIX DỨT ĐIỂM: ĐẾM SỐ TIN MỚI TỪ DATABASE ONLINE
+// =================================================================
+// 2. HÀM SINH DANH SÁCH CHAT - ĐÃ FIX DỨT ĐIỂM LỖI CHỚP GIẬT MÀN HÌNH
 // =================================================================
 function loadAdminChatUserList() {
     fetch(`${API_BASE}/api/admin/customer-stats`)
@@ -709,11 +709,13 @@ function loadAdminChatUserList() {
     .then(users => {
         const listContainer = document.getElementById("adminChatUserList");
         if (!listContainer) return;
+        
+        // Làm sạch bảng trước khi vẽ
         listContainer.innerHTML = "";
         
         const customers = users.filter(u => u.username !== 'admin');
         
-        // Khớp logic xếp hàng đợi ưu tiên
+        // Khớp logic xếp hàng đợi ưu tiên (Ai chat đẩy lên top)
         const orderedCustomers = [...customers].sort((a, b) => {
             const indexA = activeUsersOrder.indexOf(a.username);
             const indexB = activeUsersOrder.indexOf(b.username);
@@ -727,31 +729,27 @@ function loadAdminChatUserList() {
             const btn = document.createElement("button");
             const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
             
-            // 🔥 GIẢI PHÁP ĐÁM MÂY: Chọc lên DB lấy lịch sử chat để đếm chính xác số tin nhắn chưa đọc
-            fetch(`${API_BASE}/api/chat/history/${cust.username}`)
-            .then(res => res.json())
-            .then(messages => {
-                // Đếm xem người này có bao nhiêu tin nhắn mới (sender là customer) kể từ lần admin xem cuối
-                const userUnreadCount = unreadCounts[cust.username] || 0;
-                let userBadgeHtml = "";
-                
-                if (userUnreadCount > 0) {
-                    userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
-                }
-                
-                btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
-                btn.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center w-100">
-                        <div class="text-start text-truncate" style="max-width: 65%;">
-                            <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
-                            <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
-                        </div>
-                        <div class="text-end" id="badge-realtime-${cust.username}">
-                            ${userBadgeHtml}
-                        </div>
+            // Lấy trực tiếp số đếm từ RAM, KHÔNG fetch API dư thừa gây nghẽn nữa
+            const userUnreadCount = unreadCounts[cust.username] || 0;
+            let userBadgeHtml = "";
+            
+            if (userUnreadCount > 0) {
+                userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
+            }
+            
+            // Vẽ giao diện ngay lập tức
+            btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+            btn.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="text-start text-truncate" style="max-width: 65%;">
+                        <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                        <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
                     </div>
-                `;
-            });
+                    <div class="text-end" id="badge-realtime-${cust.username}">
+                        ${userBadgeHtml}
+                    </div>
+                </div>
+            `;
             
             btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
             listContainer.appendChild(btn);
