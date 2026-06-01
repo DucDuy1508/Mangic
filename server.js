@@ -667,8 +667,6 @@ io.on('connection', (socket) => {
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY); // Lấy key ở aistudio.google.com
 
-// [SỬA ĐOẠN API AI-CHAT NÀY]
-// [SỬA ĐOẠN API AI-CHAT NÀY TRONG server.js]
 app.post('/api/ai-chat', async (req, res) => {
     try {
         const { message } = req.body;
