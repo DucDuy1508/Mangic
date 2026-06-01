@@ -52,9 +52,9 @@
             <li><a onclick="switchTab('section-coupons')" id="btn-section-coupons"><i class="ti ti-ticket"></i>Quản lý Coupon</a></li>
             <li><a onclick="switchTab('section-users')" id="btn-section-users"><i class="ti ti-pulse"></i>Giám sát tài khoản</a></li>
             <li>
-                <a onclick="switchTab('section-customer-support')" id="btn-section-customer-support" class="d-flex align-items-center justify-content-between">
-                    <div><i class="ti ti-headphone-alt me-1"></i>Hỗ trợ khách hàng</div>
-                    <span id="sidebar-total-unread" class="badge bg-danger rounded-pill px-2 py-1" style="display: none; font-size: 10px; margin-right: 20px;">0</span>
+                <a onclick="switchTab('section-customer-support')" id="btn-section-customer-support" class="d-flex align-items-center justify-content-between w-100">
+                    <div class="d-flex align-items-center"><i class="ti ti-headphone-alt me-2"></i>Hỗ trợ khách hàng</div>
+                    <span id="sidebar-total-unread" class="badge bg-danger rounded-pill px-2 py-1 me-3" style="display: none; font-size: 10px;">0</span>
                 </a>
             </li>
             <li class="logout-item">
@@ -313,7 +313,6 @@
         let userPieChartInstance = null;
         let adminChatSocket = io(API_BASE); 
         
-        // 🔥 KHỞI TẠO BỘ NHỚ TẠM THỜI GIAN THỰC ĐIỀU PHỐI LUỒNG CHAT NÂNG CAO
         let currentSelectedUser = "";        
         let unreadCounts = {};               // Quản lý lưu trữ đếm số lượng tin chưa đọc từng người: { dduy: 1 }
         let activeUsersOrder = [];           // Hàng đợi quản lý ưu tiên bay lên đầu khi có tin nhắn
@@ -786,13 +785,13 @@
             adminInput.value = "";
         }
 
-        // 5. 🔥 ĐÃ SỬA TUYỆT ĐỐI LỖI UI: Hàm render chia luồng bong bóng tin nhắn khít khao trái phải
+        // 5. 🔥 ĐÃ SỬA TUYỆT ĐỐI LỖI UI: Hàm render chia luồng bong bóng tin nhắn khít khao trái phải và co giãn dọc
         function appendAdminChatMessage(sender, text) {
             const chatBody = document.getElementById("adminChatBody");
             const wrapperDiv = document.createElement("div");
             
-            // Ép d-flex chiếm trọn 100% chiều ngang hàng để ghim lề
-            wrapperDiv.className = "d-flex w-100 mb-2";
+            // Ép d-flex chiếm trọn 100% chiều ngang hàng và chặn kéo giãn dọc bằng "align-items-start"
+            wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
             
             const msgDiv = document.createElement("div");
             msgDiv.className = "admin-chat-msg p-2 rounded-3";
