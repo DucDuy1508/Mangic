@@ -664,31 +664,56 @@ io.on('connection', (socket) => {
         console.log(`>>> [SOCKET DISCONNECTED] Thiết bị ngắt kết nối hội thoại: ${socket.id}`);
     });
 });
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY); // Lấy key ở aistudio.google.com
 
+// Dùng fetch mô phỏng chính xác cURL của Google AI Studio
 app.post('/api/ai-chat', async (req, res) => {
     try {
-        console.log(">>> KEY ĐANG CHẠY TRÊN RENDER:", process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.substring(0, 10) + "..." : "KHÔNG TÌM THẤY KEY");
         const { message } = req.body;
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
-        // TUI ĐÃ ĐỔI LẠI THÀNH gemini-1.5-flash VÌ ĐÂY LÀ BẢN CHUẨN NHẤT HIỆN TẠI
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Vẫn lấy Key từ Render để bảo mật (không dán trực tiếp cái AQ... vào đây nha)
+        const apiKey = process.env.GOOGLE_API_KEY; 
+        
+        // Dùng ĐÚNG cái link mà cURL của ông cung cấp
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
-        const prompt = `Bạn là nhân viên tư vấn cho cửa hàng truyện tranh Mangic. 
-        Danh sách truyện: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan. 
-        Quy tắc: Luôn trả lời bằng tiếng Việt có dấu, thân thiện, chỉ tư vấn về truyện tranh.
-        Khách hàng hỏi: ${message}`;
+        // Đóng gói luật của Mangic và câu hỏi của khách
+        const promptData = {
+            contents: [{
+                parts: [{
+                    text: `Bạn là nhân viên tư vấn cho cửa hàng truyện tranh Mangic.
+Danh sách truyện: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
+Quy tắc: Luôn trả lời bằng tiếng Việt có dấu, thân thiện, chỉ tư vấn về truyện tranh.
+Khách hàng hỏi: ${message}`
+                }]
+            }]
+        };
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        // Gửi request bằng fetch y hệt cURL
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-goog-api-key': apiKey // Gửi key qua Header giống cURL
+            },
+            body: JSON.stringify(promptData)
+        });
 
-        res.json({ reply: text });
+        const data = await response.json();
+        
+        // Bắt lỗi nếu Google vẫn chê
+        if (data.error) {
+            console.error(">>> Lỗi từ Google:", data.error);
+            return res.status(500).json({ reply: "Lỗi Google: " + data.error.message });
+        }
+
+        // Bóc tách câu trả lời
+        const replyText = data.candidates[0].content.parts[0].text;
+        res.json({ reply: replyText });
+
     } catch (error) {
-        console.error("Lỗi AI:", error);
-        res.status(500).json({ reply: "Lỗi AI: " + error.message });
+        console.error(">>> Lỗi Server:", error);
+        res.status(500).json({ reply: "Lỗi Server: " + error.message });
     }
 });
 // ==========================================
