@@ -533,6 +533,21 @@
         body.appendChild(wrapper);
         body.scrollTop = body.scrollHeight;
     }
+    // Hàm này phải nằm trong thẻ <script> cuối trang
+function toggleChatBox() {
+    if (!loggedUser) { 
+        Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning'); 
+        return; 
+    }
+    const box = document.getElementById("chat-box-container");
+    // Kiểm tra xem nó có đang ẩn không
+    if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "flex";
+        syncUserChatHistory(); // Load lại lịch sử
+    } else {
+        box.style.display = "none";
+    }
+}
 </script>
 </body>
 </html>
