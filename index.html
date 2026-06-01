@@ -451,7 +451,10 @@
     <script src="./assets/Js/app.js"></script>
 
 <script>
-    const CHAT_SERVER = window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
+    const CHAT_SERVER = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+        ? "http://localhost:5000" 
+        : "https://mangic.onrender.com";
+        
     let chatSocket;
     const loggedUser = JSON.parse(localStorage.getItem("currentUser"));
     let currentMode = 'admin'; 
@@ -481,69 +484,70 @@
     }
 
     async function sendUserMessage() {
-    const input = document.getElementById("userChatInput");
-    const text = input.value.trim();
-    if (!text) return;
+        const input = document.getElementById("userChatInput");
+        const text = input.value.trim();
+        if (!text) return;
 
-    // 1. In tin nhắn của khách ra màn hình
-    appendUserPageChatMessage('customer', text);
-    input.value = "";
+        // 1. In tin nhắn của khách ra màn hình
+        appendUserPageChatMessage('customer', text);
+        input.value = "";
 
-    if (currentMode === 'admin') {
-        chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
-    } else {
-        // Lưu tin khách vào bộ nhớ AI
-        aiHistory.push({ sender: 'customer', text: text });
-        
-        // 2. HIỆN BONG BÓNG "AI ĐANG GÕ..." BẰNG CODE INLINE BẤT TỬ
-        const body = document.getElementById("userChatBody");
-        const typingWrapper = document.createElement("div");
-        typingWrapper.id = "ai-typing-indicator"; // Cấp ID để lát dễ xóa
-        typingWrapper.className = `msg-wrapper admin`;
-        typingWrapper.style.display = "flex";
-        typingWrapper.style.justifyContent = "flex-start";
-        
-        // Gắn thẳng CSS vào HTML để không bị đè
-        typingWrapper.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 4px; padding: 12px 15px; background: #e9ecef; border-radius: 15px; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; width: fit-content; margin-top: 5px;">
-                <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></span>
-                <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></span>
-                <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both;"></span>
-            </div>
-            <style>
-                @keyframes ai-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-            </style>
-        `;
-        body.appendChild(typingWrapper);
-        body.scrollTop = body.scrollHeight; // Cuộn chat xuống dưới cùng
-        
-        try {
-            // Gọi API
-            const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await res.json();
+        if (currentMode === 'admin') {
+            chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
+        } else {
+            // Lưu tin khách vào bộ nhớ AI
+            aiHistory.push({ sender: 'customer', text: text });
             
-            // 3. NHẬN ĐƯỢC CÂU TRẢ LỜI -> XÓA BONG BÓNG ĐANG GÕ
-            const typingElement = document.getElementById("ai-typing-indicator");
-            if (typingElement) typingElement.remove();
+            // 2. HIỆN BONG BÓNG "AI ĐANG GÕ..."
+            const body = document.getElementById("userChatBody");
+            const typingWrapper = document.createElement("div");
+            typingWrapper.id = "ai-typing-indicator"; 
+            typingWrapper.className = `msg-wrapper admin`;
+            typingWrapper.style.display = "flex";
+            typingWrapper.style.justifyContent = "flex-start";
+            
+            typingWrapper.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 4px; padding: 12px 15px; background: #e9ecef; border-radius: 15px; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; width: fit-content; margin-top: 5px;">
+                    <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></span>
+                    <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></span>
+                    <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both;"></span>
+                </div>
+                <style>
+                    @keyframes ai-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+                </style>
+            `;
+            body.appendChild(typingWrapper);
+            body.scrollTop = body.scrollHeight; 
+            
+            try {
+                // Gọi API
+                const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                
+                // 3. NHẬN ĐƯỢC CÂU TRẢ LỜI -> XÓA BONG BÓNG ĐANG GÕ
+                const typingElement = document.getElementById("ai-typing-indicator");
+                if (typingElement) typingElement.remove();
 
-            // 4. IN CÂU TRẢ LỜI CỦA AI RA
-            const reply = data.reply || "AI đang bận!";
-            aiHistory.push({ sender: 'admin', text: reply }); 
-            appendUserPageChatMessage('admin', reply);
-            
-        } catch (err) {
-            // NẾU LỖI MẠNG CŨNG PHẢI XÓA BONG BÓNG ĐANG GÕ
-            const typingElement = document.getElementById("ai-typing-indicator");
-            if (typingElement) typingElement.remove();
-            
-            appendUserPageChatMessage('admin', "Lỗi kết nối máy chủ Mangic!");
+                // TRICK UX: Chuyển đổi dấu in đậm Markdown (**) thành HTML (<strong>) và ép xuống dòng
+                let reply = data.reply || "AI đang bận, bạn đợi chút nhé!";
+                reply = reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                reply = reply.replace(/\n/g, '<br>');
+
+                // 4. IN CÂU TRẢ LỜI CỦA AI RA
+                aiHistory.push({ sender: 'admin', text: reply }); 
+                appendUserPageChatMessage('admin', reply);
+                
+            } catch (err) {
+                const typingElement = document.getElementById("ai-typing-indicator");
+                if (typingElement) typingElement.remove();
+                appendUserPageChatMessage('admin', "Lỗi kết nối máy chủ Mangic!");
+            }
         }
     }
-}
 
     // Các hàm phụ trợ
     function syncUserChatHistory() {
@@ -566,21 +570,27 @@
         body.appendChild(wrapper);
         body.scrollTop = body.scrollHeight;
     }
-    // Hàm này phải nằm trong thẻ <script> cuối trang
-function toggleChatBox() {
-    if (!loggedUser) { 
-        Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning'); 
-        return; 
+
+    function toggleChatBox() {
+        if (!loggedUser) { 
+            Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning'); 
+            return; 
+        }
+        const box = document.getElementById("chat-box-container");
+        if (box.style.display === "none" || box.style.display === "") {
+            box.style.display = "flex";
+            if (currentMode === 'admin') syncUserChatHistory(); 
+        } else {
+            box.style.display = "none";
+        }
     }
-    const box = document.getElementById("chat-box-container");
-    // Kiểm tra xem nó có đang ẩn không
-    if (box.style.display === "none" || box.style.display === "") {
-        box.style.display = "flex";
-        syncUserChatHistory(); // Load lại lịch sử
-    } else {
-        box.style.display = "none";
-    }
-}
+
+    // --- BẮT PHÍM ENTER ĐỂ GỬI TIN NHẮN THẦN TỐC ---
+    document.getElementById("userChatInput")?.addEventListener("keypress", function(e) {
+        if (e.key === 'Enter') {
+            sendUserMessage();
+        }
+    });
 </script>
 </body>
 </html>
