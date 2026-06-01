@@ -669,6 +669,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY); // Lấy key �
 
 app.post('/api/ai-chat', async (req, res) => {
     try {
+        console.log(">>> KEY ĐANG CHẠY TRÊN RENDER:", process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.substring(0, 10) + "..." : "KHÔNG TÌM THẤY KEY");
         const { message } = req.body;
         if (!message) return res.status(400).json({ reply: "Bạn chưa nhập câu hỏi!" });
 
