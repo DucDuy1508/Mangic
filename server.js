@@ -743,6 +743,18 @@ Khách hàng hỏi: ${message}`
         res.json({ reply: "Xin lỗi, hệ thống AI đang bảo trì nhẹ. Bạn hãy chuyển sang chat với Admin nhé!" });
     }
 });
+// API xử lý lưu đánh giá đơn hàng
+app.put('/api/orders/:id/review', async (req, res) => {
+    try {
+        const { rating, reviewText } = req.body;
+        // Logic tìm đơn hàng theo ID và cập nhật rating, reviewText vào Database
+        // Ví dụ: await OrderModel.findByIdAndUpdate(req.params.id, { rating, reviewText });
+        
+        res.json({ message: "Cảm ơn bạn đã đánh giá đơn hàng!" });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi hệ thống khi lưu đánh giá." });
+    }
+});
 // ==========================================
 // 9. KHỞI CHẠY HỆ THỐNG MÁY CHỦ
 // ==========================================

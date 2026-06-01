@@ -501,6 +501,7 @@
         }
 
         // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO ---
+        // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO ---
         function loadOrdersData() {
             fetch(`${API_BASE}/api/admin/orders`)
                 .then(res => res.json())
@@ -513,13 +514,9 @@
                         else if (order.orderStatus === 'Hủy đơn') orderStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-pill">Đã hủy đơn ❌</span>`;
 
                         let paymentStatusBadge = "";
-                        if (order.paymentStatus === 'Đã thanh toán') {
-                            paymentStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán ✓</span>`;
-                        } else if (order.paymentStatus === 'Thất bại') {
-                            paymentStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-3 text-white fw-bold">Thất bại ❌</span>`;
-                        } else {
-                            paymentStatusBadge = `<span class="badge bg-secondary py-2 px-2 rounded-3">Chờ thanh toán</span>`;
-                        }
+                        if (order.paymentStatus === 'Đã thanh toán') paymentStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán ✓</span>`;
+                        else if (order.paymentStatus === 'Thất bại') paymentStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-3 text-white fw-bold">Thất bại ❌</span>`;
+                        else paymentStatusBadge = `<span class="badge bg-secondary py-2 px-2 rounded-3">Chờ thanh toán</span>`;
 
                         let methodBadge = order.paymentMethod === 'QR'
                             ? `<span class="badge border border-info text-info fw-bold px-2 py-1"><i class="ti ti-qrcode me-1"></i> QR Code</span>`
@@ -527,6 +524,18 @@
 
                         let itemsHtml = order.items.map(item => `• <strong>${item.name}</strong> (x${item.quantity})`).join("<br>");
                         let isFinished = order.orderStatus === 'Đã giao' || order.orderStatus === 'Hủy đơn' ? 'disabled' : '';
+
+                        // IN ĐÁNH GIÁ CỦA KHÁCH LÊN CHO ADMIN XEM MẮT
+                        let reviewBadge = "";
+                        if (order.rating) {
+                            const stars = '★'.repeat(order.rating) + '☆'.repeat(5 - order.rating);
+                            reviewBadge = `
+                                <div class="mt-2 p-2 bg-white border border-warning rounded shadow-sm small">
+                                    <div class="fw-bold text-dark"><i class="ti ti-star text-warning"></i> Khách đánh giá: <span class="text-warning fs-6">${stars}</span></div>
+                                    <div class="text-muted fst-italic mt-1">"${order.reviewText || 'Không có bình luận thêm'}"</div>
+                                </div>
+                            `;
+                        }
 
                         return `
                             <tr>
@@ -536,7 +545,10 @@
                                     <small class="text-muted"><i class="ti ti-mobile me-1"></i>${order.shippingInfo?.phone || 'N/A'}</small><br>
                                     <small class="text-muted d-inline-block text-truncate" style="max-width: 170px;" title="${order.shippingInfo?.address || 'N/A'}"><i class="ti ti-location-pin me-1"></i>${order.shippingInfo?.address || 'N/A'}</small>
                                 </td>
-                                <td class="small text-muted py-2" style="max-width: 240px; line-height: 1.5;">${itemsHtml}</td>
+                                <td class="small text-muted py-2" style="max-width: 240px; line-height: 1.5;">
+                                    ${itemsHtml}
+                                    ${reviewBadge}
+                                </td>
                                 <td class="fw-bold text-dark">${Number(order.totalAmount).toLocaleString()} đ</td>
                                 <td>${methodBadge}</td>
                                 <td>${paymentStatusBadge}</td>

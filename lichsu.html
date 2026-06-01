@@ -40,7 +40,33 @@
             </div>
         </div>
     </div>
-
+<!-- MODAL ĐÁNH GIÁ ĐƠN HÀNG -->
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="ti ti-star text-warning me-2"></i>Đánh giá đơn <span id="rv-orderCode" class="text-warning"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <h6 class="fw-bold mb-3">Bạn cảm thấy sản phẩm và dịch vụ thế nào?</h6>
+                    <div id="star-rating-container" class="mb-3 fs-1" style="cursor: pointer; user-select: none;">
+                        <span class="star-btn text-muted" data-val="1">☆</span>
+                        <span class="star-btn text-muted" data-val="2">☆</span>
+                        <span class="star-btn text-muted" data-val="3">☆</span>
+                        <span class="star-btn text-muted" data-val="4">☆</span>
+                        <span class="star-btn text-muted" data-val="5">☆</span>
+                    </div>
+                    <input type="hidden" id="rv-rating" value="0">
+                    <input type="hidden" id="rv-orderId" value="">
+                    <textarea id="rv-text" class="form-control bg-light border-0 p-3" rows="3" placeholder="Chia sẻ cảm nhận của bạn về chất lượng truyện, bọc sách, shipper..."></textarea>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-dark w-100 fw-bold py-2" onclick="submitOrderReview()">GỬI ĐÁNH GIÁ</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="chat-bubble" onclick="toggleChatBox()"><i class="ti ti-comment"></i></div>
 
     <div id="chat-box-container">
@@ -311,6 +337,7 @@
                 .catch(err => console.error("Lỗi tải thông tin thành viên VIP:", err));
             }
 
+            // 3. HÀM TẢI LỊCH SỬ ĐƠN HÀNG CHI TIẾT (ĐÃ THÊM LOGIC RATING)
             function loadOrderHistory() {
                 fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                 .then(res => res.json())
@@ -332,9 +359,7 @@
 
                     orders.forEach(order => {
                         let finalPaymentStatus = order.paymentStatus; 
-                        if (order.orderStatus === 'Hủy đơn') {
-                            finalPaymentStatus = 'Thất bại';
-                        }
+                        if (order.orderStatus === 'Hủy đơn') finalPaymentStatus = 'Thất bại';
 
                         let oStatusBadge = "bg-secondary"; 
                         if (order.orderStatus === "Đang giao") oStatusBadge = "bg-primary text-white"; 
@@ -358,11 +383,29 @@
 
                         let cancelBtnHtml = "";
                         if (order.paymentMethod === 'COD' && order.orderStatus === 'Chờ xử lý') {
-                            cancelBtnHtml = `
-                                <button class="btn btn-sm btn-outline-danger fw-bold px-3 ms-2 shadow-sm rounded-2" onclick="cancelMyOrder('${order._id}', '${order.orderCode}')">
-                                    <i class="ti ti-close me-1"></i> Hủy đơn hàng
-                                </button>
-                            `;
+                            cancelBtnHtml = `<button class="btn btn-sm btn-outline-danger fw-bold px-3 ms-2 shadow-sm rounded-2" onclick="cancelMyOrder('${order._id}', '${order.orderCode}')"><i class="ti ti-close me-1"></i> Hủy đơn</button>`;
+                        }
+
+                        // LOGIC ĐÁNH GIÁ ĐƠN HÀNG Ở ĐÂY
+                        let reviewHtml = "";
+                        if (order.orderStatus === 'Đã giao' && finalPaymentStatus === 'Đã thanh toán') {
+                            if (order.rating) {
+                                const stars = '★'.repeat(order.rating) + '☆'.repeat(5 - order.rating);
+                                reviewHtml = `
+                                    <div class="mt-3 p-3 bg-light rounded-3 border">
+                                        <span class="d-block fw-bold text-dark mb-1">Đánh giá của bạn: <span class="text-warning fs-5">${stars}</span></span>
+                                        <span class="text-muted small fst-italic">"${order.reviewText || 'Không có bình luận'}"</span>
+                                    </div>
+                                `;
+                            } else {
+                                reviewHtml = `
+                                    <div class="mt-3 text-end">
+                                        <button class="btn btn-warning text-dark fw-bold btn-sm shadow-sm px-3" onclick="openReviewModal('${order._id}', '${order.orderCode}')">
+                                            <i class="ti ti-star me-1"></i> Viết đánh giá
+                                        </button>
+                                    </div>
+                                `;
+                            }
                         }
 
                         const orderCard = `
@@ -382,9 +425,8 @@
                                 <div class="row g-4">
                                     <div class="col-md-7 border-end">
                                         <span class="text-muted small fw-bold mb-2 d-block">DANH SÁCH TRUYỆN ĐÃ CHỌN</span>
-                                        <div style="max-height: 150px; overflow-y: auto;" class="pe-2">
-                                            ${itemsHtml}
-                                        </div>
+                                        <div style="max-height: 150px; overflow-y: auto;" class="pe-2">${itemsHtml}</div>
+                                        ${reviewHtml} 
                                     </div>
                                     <div class="col-md-5" style="font-size: 13px;">
                                         <span class="text-muted small fw-bold mb-2 d-block">ĐỊA CHỈ NHẬN HÀNG</span>
@@ -397,10 +439,7 @@
                                 <div class="row d-flex justify-content-between align-items-center border-top pt-3 mt-3 bg-light p-2 rounded mx-0">
                                     <span class="col-sm-7 small text-muted px-0">Hình thức: <strong class="text-dark">${order.paymentMethod === 'QR' ? 'Chuyển khoản ngân hàng (QR)' : 'Thanh toán COD khi nhận hàng'}</strong></span>
                                     <div class="col-sm-5 text-sm-end px-0 mt-2 mt-sm-0 d-flex align-items-center justify-content-sm-end justify-content-between">
-                                        <div>
-                                            <span class="text-muted small">Tổng tiền:</span>
-                                            <span class="fw-bold text-danger fs-5 ms-1">${order.totalAmount.toLocaleString('vi-VN')} đ</span>
-                                        </div>
+                                        <div><span class="text-muted small">Tổng tiền:</span> <span class="fw-bold text-danger fs-5 ms-1">${order.totalAmount.toLocaleString('vi-VN')} đ</span></div>
                                         ${cancelBtnHtml}
                                     </div>
                                 </div>
@@ -415,6 +454,50 @@
                 });
             }
         });
+
+        // --- CÁC HÀM XỬ LÝ SỰ KIỆN ĐÁNH GIÁ (Dán ở cuối thẻ Script) ---
+        function openReviewModal(orderId, orderCode) {
+            document.getElementById('rv-orderId').value = orderId;
+            document.getElementById('rv-orderCode').innerText = "#" + orderCode;
+            document.getElementById('rv-rating').value = 0;
+            document.getElementById('rv-text').value = "";
+            document.querySelectorAll('.star-btn').forEach(s => { s.innerText = '☆'; s.classList.remove('text-warning'); s.classList.add('text-muted'); });
+            new bootstrap.Modal(document.getElementById('reviewModal')).show();
+        }
+
+        // Logic hover & click 5 sao vàng
+        document.querySelectorAll('.star-btn').forEach(star => {
+            star.addEventListener('click', function() {
+                let val = parseInt(this.getAttribute('data-val'));
+                document.getElementById('rv-rating').value = val;
+                document.querySelectorAll('.star-btn').forEach(s => {
+                    if (parseInt(s.getAttribute('data-val')) <= val) {
+                        s.innerText = '★'; s.classList.add('text-warning'); s.classList.remove('text-muted');
+                    } else {
+                        s.innerText = '☆'; s.classList.remove('text-warning'); s.classList.add('text-muted');
+                    }
+                });
+            });
+        });
+
+        function submitOrderReview() {
+            const orderId = document.getElementById('rv-orderId').value;
+            const rating = document.getElementById('rv-rating').value;
+            const reviewText = document.getElementById('rv-text').value.trim();
+
+            if (rating == 0) return Swal.fire('Lưu ý', 'Vui lòng chọn số sao để đánh giá!', 'warning');
+
+            fetch(`${API_URL}/api/orders/${orderId}/review`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating, reviewText })
+            })
+            .then(res => res.json())
+            .then(data => {
+                Swal.fire('Cảm ơn bạn!', 'Đánh giá đã được ghi nhận.', 'success').then(() => window.location.reload());
+            })
+            .catch(err => Swal.fire('Lỗi', 'Không thể gửi đánh giá lúc này', 'error'));
+        }
 
         function cancelMyOrder(orderId, orderCode) {
             Swal.fire({
