@@ -542,7 +542,15 @@ if (loggedUser) {
 function setChatMode(mode) {
     currentMode = mode;
     const body = document.getElementById("userChatBody");
-    body.innerHTML = `<div class="text-center small text-muted my-2">Đã chuyển sang chế độ: ${mode === 'admin' ? 'Nhân viên hỗ trợ' : 'AI Tư vấn Manga'}</div>`;
+    body.innerHTML = ""; // Xóa tin cũ để hiển thị đúng chế độ
+
+    if (mode === 'admin') {
+        // Nếu chuyển về Admin, tải lại lịch sử từ MongoDB để admin/user tiếp tục chat
+        syncUserChatHistory(); 
+    } else {
+        // Nếu chuyển sang AI, chỉ hiện thông báo chào
+        body.innerHTML = `<div class="text-center small text-muted my-2">Đang ở chế độ AI Tư vấn Manga</div>`;
+    }
 }
 
 // Sửa lại hàm sendUserMessage để phân luồng
@@ -551,19 +559,21 @@ async function sendUserMessage() {
     const text = input.value.trim();
     if (!text) return;
 
-    // Hiển thị tin của User
-    appendUserPageChatMessage('customer', text);
+    appendUserPageChatMessage('customer', text); // Hiện tin mình vừa gửi
     input.value = "";
 
     if (currentMode === 'admin') {
-        // Gửi cho Admin qua Socket
-        globalChatSocket.emit('send_message', {
-            username: currentLoggedUser.username,
-            sender: 'customer',
-            text: text
-        });
+        if (globalChatSocket && globalChatSocket.connected) {
+            globalChatSocket.emit('send_message', {
+                username: currentLoggedUser.username,
+                sender: 'customer',
+                text: text
+            });
+        } else {
+            Swal.fire('Lỗi', 'Mất kết nối với Admin, vui lòng tải lại trang!', 'error');
+        }
     } else {
-        // Gửi cho AI qua API
+        // AI Tư vấn
         try {
             const response = await fetch(`${LOGIC_SERVER}/api/ai-chat`, {
                 method: 'POST',
@@ -573,7 +583,7 @@ async function sendUserMessage() {
             const data = await response.json();
             appendUserPageChatMessage('ai', data.reply);
         } catch (err) {
-            appendUserPageChatMessage('ai', "AI đang bận, bạn thử lại nhé!");
+            appendUserPageChatMessage('ai', "AI đang bận, thử lại sau nhé!");
         }
     }
 }
