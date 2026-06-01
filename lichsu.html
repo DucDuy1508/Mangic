@@ -454,49 +454,6 @@
             }
         });
 
-        // --- CÁC HÀM XỬ LÝ SỰ KIỆN ĐÁNH GIÁ (Dán ở cuối thẻ Script) ---
-        function openReviewModal(orderId, orderCode) {
-            document.getElementById('rv-orderId').value = orderId;
-            document.getElementById('rv-orderCode').innerText = "#" + orderCode;
-            document.getElementById('rv-rating').value = 0;
-            document.getElementById('rv-text').value = "";
-            document.querySelectorAll('.star-btn').forEach(s => { s.innerText = '☆'; s.classList.remove('text-warning'); s.classList.add('text-muted'); });
-            new bootstrap.Modal(document.getElementById('reviewModal')).show();
-        }
-
-        // Logic hover & click 5 sao vàng
-        document.querySelectorAll('.star-btn').forEach(star => {
-            star.addEventListener('click', function() {
-                let val = parseInt(this.getAttribute('data-val'));
-                document.getElementById('rv-rating').value = val;
-                document.querySelectorAll('.star-btn').forEach(s => {
-                    if (parseInt(s.getAttribute('data-val')) <= val) {
-                        s.innerText = '★'; s.classList.add('text-warning'); s.classList.remove('text-muted');
-                    } else {
-                        s.innerText = '☆'; s.classList.remove('text-warning'); s.classList.add('text-muted');
-                    }
-                });
-            });
-        });
-
-        function submitOrderReview() {
-            const orderId = document.getElementById('rv-orderId').value;
-            const rating = document.getElementById('rv-rating').value;
-            const reviewText = document.getElementById('rv-text').value.trim();
-
-            if (rating == 0) return Swal.fire('Lưu ý', 'Vui lòng chọn số sao để đánh giá!', 'warning');
-
-            fetch(`${API_URL}/api/orders/${orderId}/review`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rating, reviewText })
-            })
-            .then(res => res.json())
-            .then(data => {
-                Swal.fire('Cảm ơn bạn!', 'Đánh giá đã được ghi nhận.', 'success').then(() => window.location.reload());
-            })
-            .catch(err => Swal.fire('Lỗi', 'Không thể gửi đánh giá lúc này', 'error'));
-        }
 
         function cancelMyOrder(orderId, orderCode) {
             Swal.fire({
