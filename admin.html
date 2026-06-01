@@ -679,77 +679,94 @@
         // =================================================================
         
         // Lắng nghe tín hiệu ngầm từ mạng gửi tin nhắn của User đổ sang phòng chat
-        adminChatSocket.on('receive_message', function(msg) {
-            if (msg.sender === 'customer') {
-                // Nếu đang đóng khung chat người này -> Tăng số đếm cục bộ tin nhắn chưa đọc
-                if (msg.username !== currentSelectedUser) {
-                    unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
-                }
-                
-                // Đồng bộ hàng đợi: Đẩy user vừa nhắn tin lên vị trí số 1 đầu danh sách
-                activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
-                activeUsersOrder.unshift(msg.username); 
-                
-                // Trực tiếp gọi hàm vẽ lại để cập nhật Badge đỏ Realtime tức khắc
-                updateSidebarTotalBadge();
-                loadAdminChatUserList();
+        // 1. LẮNG NGHE LỒNG TÍN HIỆU TIN NHẮN REALTIME TỪ CLOUD DỘI VỀ
+adminChatSocket.on('receive_message', function(msg) {
+    if (msg.sender === 'customer') {
+        // Nếu admin đang KHÔNG mở khung chat của người này -> Tăng số đếm chưa đọc lên
+        if (msg.username !== currentSelectedUser) {
+            unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
+        }
+        
+        // Đẩy tên người vừa nhắn lên top 1 mảng hàng đợi ưu tiên
+        activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
+        activeUsersOrder.unshift(msg.username); 
+        
+        // 🔥 KÍCH HOẠT ĐỒNG LOẠT: Nổ số đếm Sidebar trái và vẽ lại list nổ badge số tin mới ngay lập tức!
+        updateSidebarTotalBadge();
+        loadAdminChatUserList();
+    }
+    
+    // Nếu đúng phòng chat đang mở -> Dán chữ lên màn hình
+    if (msg.username === currentSelectedUser) {
+        appendAdminChatMessage(msg.sender, msg.text);
+    }
+});
+
+       // =================================================================
+// 2. HÀM SINH DANH SÁCH HÀNG CHỜ CHAT - ĐÃ SỬA VÁ TRUYỀN BADGE REALTIME CỰC VIP
+// =================================================================
+function loadAdminChatUserList() {
+    fetch(`${API_BASE}/api/admin/customer-stats`)
+    .then(res => res.json())
+    .then(users => {
+        const listContainer = document.getElementById("adminChatUserList");
+        listContainer.innerHTML = "";
+        
+        // Lọc bỏ tài khoản admin tối cao khỏi hàng chờ chăm sóc
+        const customers = users.filter(u => u.username !== 'admin');
+        
+        // Thuật toán sắp xếp: Ưu tiên đẩy những User có tin nhắn chưa đọc hoặc nằm trong hàng đợi lên Top 1
+        const orderedCustomers = [...customers].sort((a, b) => {
+            const unreadA = unreadCounts[a.username] || 0;
+            const unreadB = unreadCounts[b.username] || 0;
+            
+            // Nếu có người có tin nhắn chưa đọc, đẩy người đó lên trước
+            if (unreadA !== unreadB) return unreadB - unreadA;
+            
+            const indexA = activeUsersOrder.indexOf(a.username);
+            const indexB = activeUsersOrder.indexOf(b.username);
+            
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return 0;
+        });
+        
+        orderedCustomers.forEach(cust => {
+            const btn = document.createElement("button");
+            // Kiểm tra trạng thái tô màu mục đang chat
+            const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
+            
+            // Bốc dỡ số lượng tin nhắn chưa đọc trong bộ nhớ tạm thời gian thực
+            const userUnreadCount = unreadCounts[cust.username] || 0;
+            let userBadgeHtml = "";
+            
+            // NỔ SỐ BADGE ĐỎ: Nếu phát hiện có tin nhắn mới dội về, sinh ngay badge đỏ rực bên vế phải
+            if (userUnreadCount > 0) {
+                userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm" style="animation: pulse 1s infinite;">${userUnreadCount} tin mới</span>`;
             }
             
-            // Nếu đúng phòng chat đang mở -> Render dán tin nhắn lên tường chi tiết lập tức
-            if (msg.username === currentSelectedUser) {
-                appendAdminChatMessage(msg.sender, msg.text);
-            }
+            btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+            
+            // Layout chuẩn cấu trúc d-flex chia 2 vế: Trái thông tin khách, Phải nổ số tin mới
+            btn.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="text-start text-truncate" style="max-width: 65%;">
+                        <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                        <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
+                    </div>
+                    <div class="text-end" id="badge-box-${cust.username}">
+                        ${userBadgeHtml}
+                    </div>
+                </div>
+            `;
+            
+            btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
+            listContainer.appendChild(btn);
         });
-
-        function loadAdminChatUserList() {
-            fetch(`${API_BASE}/api/admin/customer-stats`)
-            .then(res => res.json())
-            .then(users => {
-                const listContainer = document.getElementById("adminChatUserList");
-                listContainer.innerHTML = "";
-                
-                const customers = users.filter(u => u.username !== 'admin');
-                
-                // Xếp hạng ưu tiên hàng chờ chat dựa trên activeUsersOrder
-                const orderedCustomers = [...customers].sort((a, b) => {
-                    const indexA = activeUsersOrder.indexOf(a.username);
-                    const indexB = activeUsersOrder.indexOf(b.username);
-                    
-                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    if (indexA !== -1) return -1;
-                    if (indexB !== -1) return 1;
-                    return 0;
-                });
-                
-                orderedCustomers.forEach(cust => {
-                    const btn = document.createElement("button");
-                    const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
-                    
-                    // Tính toán và dán badge đếm số lượng tin nhắn riêng lẻ chưa đọc
-                    const userUnreadCount = unreadCounts[cust.username] || 0;
-                    let userBadgeHtml = "";
-                    
-                    if (userUnreadCount > 0) {
-                        userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
-                    }
-                    
-                    btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
-                    btn.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <div class="text-start text-truncate" style="max-width: 70%;">
-                                <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
-                                <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
-                            </div>
-                            <div class="text-end">
-                                ${userBadgeHtml}
-                            </div>
-                        </div>
-                    `;
-                    btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
-                    listContainer.appendChild(btn);
-                });
-            });
-        }
+    })
+    .catch(err => console.error("Lỗi đồng bộ danh sách hàng chờ chat:", err));
+}
 
         function selectUserToChat(username, fullName) {
             currentSelectedUser = username;
