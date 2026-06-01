@@ -481,36 +481,62 @@
     }
 
     async function sendUserMessage() {
-        const input = document.getElementById("userChatInput");
-        const text = input.value.trim();
-        if (!text) return;
+    const input = document.getElementById("userChatInput");
+    const text = input.value.trim();
+    if (!text) return;
 
-        appendUserPageChatMessage('customer', text);
-        input.value = "";
+    // 1. In tin nhắn của khách ra màn hình
+    appendUserPageChatMessage('customer', text);
+    input.value = "";
 
-        if (currentMode === 'admin') {
-            chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
-        } else {
-            // Lưu tin khách vào bộ nhớ AI
-            aiHistory.push({ sender: 'customer', text: text });
+    if (currentMode === 'admin') {
+        chatSocket.emit('send_message', { username: loggedUser.username, sender: 'customer', text: text });
+    } else {
+        // Lưu tin khách vào bộ nhớ AI
+        aiHistory.push({ sender: 'customer', text: text });
+        
+        // 2. HIỆN BONG BÓNG "AI ĐANG GÕ..."
+        const body = document.getElementById("userChatBody");
+        const typingWrapper = document.createElement("div");
+        typingWrapper.id = "ai-typing-indicator"; // Cấp ID để lát dễ xóa
+        typingWrapper.className = `msg-wrapper admin`;
+        typingWrapper.style.display = "flex";
+        typingWrapper.style.justifyContent = "flex-start";
+        typingWrapper.innerHTML = `
+            <div class="typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        `;
+        body.appendChild(typingWrapper);
+        body.scrollTop = body.scrollHeight; // Cuộn chat xuống dưới cùng
+        
+        try {
+            // Gọi API
+            const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
             
-            try {
-                const res = await fetch(`${CHAT_SERVER}/api/ai-chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
-                });
-                const data = await res.json();
-                
-                // Lưu tin AI vào bộ nhớ AI
-                const reply = data.reply || "AI đang bận!";
-                aiHistory.push({ sender: 'admin', text: reply }); // Dùng admin class để nó hiện bên trái
-                appendUserPageChatMessage('admin', reply);
-            } catch (err) {
-                appendUserPageChatMessage('admin', "Lỗi kết nối AI!");
-            }
+            // 3. NHẬN ĐƯỢC CÂU TRẢ LỜI -> XÓA BONG BÓNG ĐANG GÕ
+            const typingElement = document.getElementById("ai-typing-indicator");
+            if (typingElement) typingElement.remove();
+
+            // 4. IN CÂU TRẢ LỜI CỦA AI RA
+            const reply = data.reply || "AI đang bận!";
+            aiHistory.push({ sender: 'admin', text: reply }); 
+            appendUserPageChatMessage('admin', reply);
+            
+        } catch (err) {
+            // NẾU LỖI MẠNG CŨNG PHẢI XÓA BONG BÓNG ĐANG GÕ
+            const typingElement = document.getElementById("ai-typing-indicator");
+            if (typingElement) typingElement.remove();
+            
+            appendUserPageChatMessage('admin', "Lỗi kết nối máy chủ Mangic!");
         }
     }
+}
 
     // Các hàm phụ trợ
     function syncUserChatHistory() {
