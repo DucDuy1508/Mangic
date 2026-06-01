@@ -892,3 +892,10 @@
         padding: 10px 0 !important;
     }
 }
+.msg-wrapper.ai { justify-content: flex-start; }
+.msg-wrapper.ai .msg-box { 
+    background: #e0d8ff; /* Màu tím nhạt */
+    color: #333; 
+    border-bottom-left-radius: 2px;
+    border: 1px solid #c8bcff;
+}

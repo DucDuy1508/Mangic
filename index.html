@@ -422,9 +422,20 @@
 
     <div id="chat-box-container">
         <div class="chat-header">
-            <span><i class="ti ti-headphone-alt me-2"></i> Hỗ trợ Mangic Shop</span>
+    <div class="d-flex flex-column w-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span><i class="ti ti-headphone-alt me-2"></i> Hỗ trợ Mangic</span>
             <button class="btn-close btn-close-white btn-sm" onclick="toggleChatBox()"></button>
         </div>
+        <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="chatMode" id="modeAdmin" checked>
+            <label class="btn btn-sm btn-outline-warning" for="modeAdmin" onclick="setChatMode('admin')">Admin</label>
+            
+            <input type="radio" class="btn-check" name="chatMode" id="modeAI">
+            <label class="btn btn-sm btn-outline-warning" for="modeAI" onclick="setChatMode('ai')">AI Tư vấn</label>
+        </div>
+    </div>
+</div>
         <div class="chat-body d-flex flex-column" id="userChatBody"></div>
         <div class="chat-footer">
             <input type="text" id="userChatInput" class="form-control form-control-sm" placeholder="Nhập nội dung cần hỗ trợ...">
@@ -526,6 +537,46 @@ if (loggedUser) {
                 sendUserMessage();
             }
         });
+        let currentMode = 'admin'; // Mặc định là chat với Admin
+
+function setChatMode(mode) {
+    currentMode = mode;
+    const body = document.getElementById("userChatBody");
+    body.innerHTML = `<div class="text-center small text-muted my-2">Đã chuyển sang chế độ: ${mode === 'admin' ? 'Nhân viên hỗ trợ' : 'AI Tư vấn Manga'}</div>`;
+}
+
+// Sửa lại hàm sendUserMessage để phân luồng
+async function sendUserMessage() {
+    const input = document.getElementById("userChatInput");
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Hiển thị tin của User
+    appendUserPageChatMessage('customer', text);
+    input.value = "";
+
+    if (currentMode === 'admin') {
+        // Gửi cho Admin qua Socket
+        globalChatSocket.emit('send_message', {
+            username: currentLoggedUser.username,
+            sender: 'customer',
+            text: text
+        });
+    } else {
+        // Gửi cho AI qua API
+        try {
+            const response = await fetch(`${LOGIC_SERVER}/api/ai-chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+            appendUserPageChatMessage('ai', data.reply);
+        } catch (err) {
+            appendUserPageChatMessage('ai', "AI đang bận, bạn thử lại nhé!");
+        }
+    }
+}
     </script>
 </body>
 </html>

@@ -664,7 +664,25 @@ io.on('connection', (socket) => {
         console.log(`>>> [SOCKET DISCONNECTED] Thiết bị ngắt kết nối hội thoại: ${socket.id}`);
     });
 });
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI("API_KEY_CỦA_ÔNG_LẤY_Ở_AISTUDIO"); // Lấy key ở aistudio.google.com
 
+app.post('/api/ai-chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Truyền context shop vào để AI tư vấn đúng sản phẩm của ông
+        const prompt = `Bạn là nhân viên tư vấn của cửa hàng truyện tranh Mangic. 
+        Dưới đây là danh sách truyện shop đang bán: Dr. Stone, Jujutsu Kaisen, Spy x Family, Gachiakuta, Dandadan, Konosuba, Kakegurui, Iruma-kun, Horimiya, Jigokuraku, Hanako-kun, DanMachi, Tomodachi Game, Slime, Attack on Titan.
+        Khách hàng hỏi: "${message}". Hãy tư vấn dựa trên danh sách này một cách thân thiện.`;
+
+        const result = await model.generateContent(prompt);
+        res.json({ reply: result.response.text() });
+    } catch (error) {
+        res.status(500).json({ error: "AI đang bận, thử lại sau nhé!" });
+    }
+});
 // ==========================================
 // 9. KHỞI CHẠY HỆ THỐNG MÁY CHỦ
 // ==========================================
