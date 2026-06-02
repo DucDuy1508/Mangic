@@ -5,11 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lịch Sử Mua Hàng - Mangic Shop</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@icon/themify-icons@1.0.1-alpha.3/themify-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
     <style>
         .order-card { transition: all 0.2s; border: 1px solid #e0e0e0; }
         .order-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important; }
+        .star-btn { transition: color 0.2s; }
+        
+        /* Style Chat */
+        #chat-bubble { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: #1e1e2d; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; transition: all 0.3s; }
+        #chat-bubble:hover { transform: scale(1.05); background: #ffbc00; color: #1e1e2d; }
+        #chat-box-container { position: fixed; bottom: 95px; right: 25px; width: 350px; height: 450px; background: white; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 1000; overflow: hidden; border: 1px solid #e0e0e0; transition: all 0.3s ease-in-out; }
+        .chat-header { background: #1e1e2d; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffbc00; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
+        .chat-footer { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; background: white; }
+        .msg-box { padding: 8px 12px; border-radius: 15px; max-width: 75%; font-size: 14px; word-break: break-word; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .msg-wrapper { display: flex; width: 100%; margin-bottom: 2px; align-items: flex-start; }
+        .msg-wrapper.customer { justify-content: flex-end; }
+        .msg-wrapper.customer .msg-box { background: #ffbc00; color: black; border-bottom-right-radius: 2px; }
+        .msg-wrapper.admin { justify-content: flex-start; }
+        .msg-wrapper.admin .msg-box { background: #e9ecef; color: black; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; }
     </style>
 </head>
 <body class="bg-light">
@@ -32,7 +50,6 @@
         <div class="d-flex align-items-center mb-4">
             <h2 class="fw-bold text-dark m-0"><i class="ti ti-time text-secondary me-2"></i>LỊCH SỬ ĐƠN HÀNG VÀ TRẠNG THÁI</h2>
         </div>
-
         <div id="orderHistoryContainer" class="d-flex flex-column gap-4">
             <div class="text-center py-5" id="loaderSpinner">
                 <div class="spinner-border text-dark" role="status"></div>
@@ -40,7 +57,8 @@
             </div>
         </div>
     </div>
-<div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
+
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-dark text-white">
@@ -66,8 +84,8 @@
             </div>
         </div>
     </div>
-    <div id="chat-bubble" onclick="toggleChatBox()"><i class="ti ti-comment"></i></div>
 
+    <div id="chat-bubble" onclick="toggleChatBox()"><i class="ti ti-comment"></i></div>
     <div id="chat-box-container">
         <div class="chat-header">
             <div class="d-flex flex-column w-100">
@@ -78,7 +96,6 @@
                 <div class="btn-group w-100" role="group">
                     <input type="radio" class="btn-check" name="chatMode" id="modeAdmin" checked>
                     <label class="btn btn-sm btn-outline-warning" for="modeAdmin" onclick="setChatMode('admin')">Admin</label>
-                    
                     <input type="radio" class="btn-check" name="chatMode" id="modeAI">
                     <label class="btn btn-sm btn-outline-warning" for="modeAI" onclick="setChatMode('ai')">AI Tư vấn</label>
                 </div>
@@ -91,44 +108,33 @@
         </div>
     </div>
 
-    <style>
-        #chat-bubble { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: #1e1e2d; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; transition: all 0.3s; }
-        #chat-bubble:hover { transform: scale(1.05); background: #ffbc00; color: #1e1e2d; }
-        #chat-box-container { position: fixed; bottom: 95px; right: 25px; width: 350px; height: 450px; background: white; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 1000; overflow: hidden; border: 1px solid #e0e0e0; transition: all 0.3s ease-in-out; }
-        .chat-header { background: #1e1e2d; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffbc00; }
-        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
-        .chat-footer { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; background: white; }
-        
-        /* Style tin nhắn co giãn ôm khít text chữ chặn đứng lỗi cột đình */
-        .msg-box { padding: 8px 12px; border-radius: 15px; max-width: 75%; font-size: 14px; word-break: break-word; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .msg-wrapper { display: flex; width: 100%; margin-bottom: 2px; align-items: flex-start; }
-        .msg-wrapper.customer { justify-content: flex-end; }
-        .msg-wrapper.customer .msg-box { background: #ffbc00; color: black; border-bottom-right-radius: 2px; }
-        .msg-wrapper.admin { justify-content: flex-start; }
-        .msg-wrapper.admin .msg-box { background: #e9ecef; color: black; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; }
-    </style>
-
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
     <script>
-        const LOGIC_SERVER = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
-            ? "http://localhost:5000"
-            : "https://mangic.onrender.com";
-            
+        const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+            ? "http://localhost:5000" : "https://mangic.onrender.com";
+        const LOGIC_SERVER = API_URL; // Dùng chung URL
+        
+        const currentUser = JSON.parse(localStorage.getItem("currentUser"));
         let globalChatSocket;
-        const currentLoggedUser = JSON.parse(localStorage.getItem("currentUser"));
-
         let currentMode = 'admin'; 
         let aiHistory = []; 
 
-        if (currentLoggedUser) {
-            globalChatSocket = io(LOGIC_SERVER, {
-                transports: ['polling', 'websocket'],
-                withCredentials: true
-            });
+        // 1. KHỞI TẠO HỆ THỐNG KHI TẢI TRANG
+        document.addEventListener("DOMContentLoaded", function() {
+            if (!currentUser) {
+                Swal.fire('Thông báo', 'Vui lòng đăng nhập!', 'warning').then(() => window.location.href = "dangnhap.html");
+                return;
+            }
+            document.getElementById("txtUserWelcome").innerText = `Xin chào, ${currentUser.fullName || currentUser.username}`;
             
-            globalChatSocket.emit('join_room', currentLoggedUser.username);
+            initChat();
+            loadMembershipCard();
+            loadOrderHistory();
+        });
 
+        // 2. LOGIC CHAT REALTIME & AI
+        function initChat() {
+            globalChatSocket = io(LOGIC_SERVER, { transports: ['polling', 'websocket'], withCredentials: true });
+            globalChatSocket.emit('join_room', currentUser.username);
             globalChatSocket.on('receive_message', function(msg) {
                 if (currentMode === 'admin') appendUserPageChatMessage(msg.sender, msg.text);
             });
@@ -136,21 +142,12 @@
 
         function setChatMode(mode) {
             currentMode = mode;
-            const body = document.getElementById("userChatBody");
-            body.innerHTML = ""; 
-
-            if (mode === 'admin') {
-                syncUserChatHistory(); 
-            } else {
-                aiHistory.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
-            }
+            document.getElementById("userChatBody").innerHTML = ""; 
+            if (mode === 'admin') syncUserChatHistory(); 
+            else aiHistory.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
         }
 
         function toggleChatBox() {
-            if (!currentLoggedUser) {
-                Swal.fire('Yêu cầu định danh', 'Vui lòng đăng nhập tài khoản để kết nối với bộ phận hỗ trợ khách hàng!', 'warning');
-                return;
-            }
             const chatBoxContainer = document.getElementById("chat-box-container");
             if (chatBoxContainer.style.display === "none" || chatBoxContainer.style.display === "") {
                 chatBoxContainer.style.display = "flex";
@@ -161,14 +158,13 @@
         }
 
         function syncUserChatHistory() {
-            fetch(`${LOGIC_SERVER}/api/chat/history/${currentLoggedUser.username}`)
+            fetch(`${LOGIC_SERVER}/api/chat/history/${currentUser.username}`)
                 .then(res => res.json())
                 .then(messages => {
                     const chatBody = document.getElementById("userChatBody");
                     chatBody.innerHTML = ""; 
                     messages.forEach(msg => appendUserPageChatMessage(msg.sender, msg.text));
-                })
-                .catch(err => console.error("Lỗi đồng bộ lịch sử đa trang:", err));
+                });
         }
 
         async function sendUserMessage() {
@@ -180,52 +176,32 @@
             chatInput.value = ""; 
 
             if (currentMode === 'admin') {
-                globalChatSocket.emit('send_message', {
-                    username: currentLoggedUser.username,
-                    sender: 'customer',
-                    text: textContent
-                });
+                globalChatSocket.emit('send_message', { username: currentUser.username, sender: 'customer', text: textContent });
             } else {
                 aiHistory.push({ sender: 'customer', text: textContent });
-                
                 const body = document.getElementById("userChatBody");
+                
+                // Hiệu ứng đang gõ
                 const typingWrapper = document.createElement("div");
                 typingWrapper.id = "ai-typing-indicator"; 
                 typingWrapper.className = `msg-wrapper admin`;
-                typingWrapper.innerHTML = `
-                    <div class="msg-box" style="display: flex; align-items: center; gap: 4px; padding: 12px 15px; background: #e9ecef; border-radius: 15px; border-bottom-left-radius: 2px; border: 1px solid #dee2e6; width: fit-content;">
-                        <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></span>
-                        <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></span>
-                        <span style="width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: ai-bounce 1.4s infinite ease-in-out both;"></span>
-                    </div>
-                    <style>
-                        @keyframes ai-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-                    </style>
-                `;
+                typingWrapper.innerHTML = `<div class="msg-box" style="display:flex;gap:4px;background:#e9ecef;"><span style="width:6px;height:6px;background:#6c757d;border-radius:50%;"></span><span style="width:6px;height:6px;background:#6c757d;border-radius:50%;"></span><span style="width:6px;height:6px;background:#6c757d;border-radius:50%;"></span></div>`;
                 body.appendChild(typingWrapper);
                 body.scrollTop = body.scrollHeight; 
                 
                 try {
                     const res = await fetch(`${LOGIC_SERVER}/api/ai-chat`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message: textContent })
                     });
                     const data = await res.json();
+                    document.getElementById("ai-typing-indicator")?.remove();
                     
-                    const typingElement = document.getElementById("ai-typing-indicator");
-                    if (typingElement) typingElement.remove();
-
-                    let reply = data.reply || "AI đang bận, bạn đợi chút nhé!";
-                    reply = reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    reply = reply.replace(/\n/g, '<br>');
-                    
+                    let reply = data.reply ? data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') : "AI đang bận!";
                     aiHistory.push({ sender: 'admin', text: reply }); 
                     appendUserPageChatMessage('admin', reply);
-                    
                 } catch (err) {
-                    const typingElement = document.getElementById("ai-typing-indicator");
-                    if (typingElement) typingElement.remove();
+                    document.getElementById("ai-typing-indicator")?.remove();
                     appendUserPageChatMessage('admin', "Lỗi kết nối máy chủ AI Mangic!");
                 }
             }
@@ -233,297 +209,167 @@
 
         function appendUserPageChatMessage(sender, text) {
             const chatBody = document.getElementById("userChatBody");
-            if (!chatBody) return;
-
             const wrapper = document.createElement("div");
             wrapper.className = `msg-wrapper ${sender}`;
-
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "msg-box";
-            msgDiv.innerHTML = text; 
-
-            wrapper.appendChild(msgDiv);
+            wrapper.innerHTML = `<div class="msg-box">${text}</div>`;
             chatBody.appendChild(wrapper);
-            
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
-        document.getElementById("userChatInput")?.addEventListener("keypress", function(e) {
-            if (e.key === 'Enter') {
-                sendUserMessage();
-            }
-        });
-    </script>
+        document.getElementById("userChatInput")?.addEventListener("keypress", e => { if (e.key === 'Enter') sendUserMessage(); });
 
-    <script>
-        const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
-            ? "http://localhost:5000"
-            : "https://mangic.onrender.com";
+        // 3. LOGIC VIP & THỐNG KÊ CHI TIÊU
+        function loadMembershipCard() {
+            fetch(`${API_URL}/api/admin/customer-stats`)
+            .then(res => res.json())
+            .then(stats => {
+                const myStat = stats.find(stat => stat.username === currentUser.username);
+                const totalSpent = myStat ? myStat.totalSpent : 0;
 
-        document.addEventListener("DOMContentLoaded", function() {
-            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-            if (!currentUser) {
-                Swal.fire('Thông báo', 'Vui lòng đăng nhập để xem lịch sử mua hàng!', 'warning').then(() => {
-                    window.location.href = "dangnhap.html";
-                });
-                return;
-            }
+                let tierName = "ĐỒNG 🥉", bgCard = "linear-gradient(135deg, #7f8c8d, #95a5a6)", nextTierText = `Tích lũy thêm <strong class="text-warning">${(500000 - totalSpent).toLocaleString('vi-VN')} đ</strong> lên BẠC 🥈`; 
+                if (totalSpent >= 3000000) { tierName = "KIM CƯƠNG 💎"; bgCard = "linear-gradient(135deg, #4A00E0, #8E2DE2)"; nextTierText = `Chúc mừng bạn đạt hạng cao nhất!`; } 
+                else if (totalSpent >= 1500000) { tierName = "VÀNG 🥇"; bgCard = "linear-gradient(135deg, #f1c40f, #f39c12)"; nextTierText = `Tích lũy thêm <strong class="text-warning">${(3000000 - totalSpent).toLocaleString('vi-VN')} đ</strong> lên KIM CƯƠNG 💎`; } 
+                else if (totalSpent >= 500000) { tierName = "BẠC 🥈"; bgCard = "linear-gradient(135deg, #34495e, #2c3e50)"; nextTierText = `Tích lũy thêm <strong class="text-warning">${(1500000 - totalSpent).toLocaleString('vi-VN')} đ</strong> lên VÀNG 🥇`; }
 
-            document.getElementById("txtUserWelcome").innerText = `Xin chào, ${currentUser.fullName || currentUser.username}`;
-
-            loadMembershipCard();
-            loadOrderHistory();
-
-            function loadMembershipCard() {
-                fetch(`${API_URL}/api/admin/customer-stats`)
-                .then(res => res.json())
-                .then(stats => {
-                    const myStat = stats.find(stat => stat.username === currentUser.username);
-                    const totalSpent = myStat ? myStat.totalSpent : 0;
-
-                    let tierName = "ĐỒNG 🥉";
-                    let nextTierText = "";
-                    let bgCard = "linear-gradient(135deg, #7f8c8d, #95a5a6)"; 
-
-                    if (totalSpent >= 3000000) {
-                        tierName = "KIM CƯƠNG 💎";
-                        nextTierText = `<span class="text-warning fw-bold"><i class="ti ti-gift me-1"></i> Chúc mừng tối cao!</span> Bạn đã đạt cấp độ thành viên cao nhất.`;
-                        bgCard = "linear-gradient(135deg, #4A00E0, #8E2DE2)"; 
-                    } else if (totalSpent >= 1500000) {
-                        tierName = "VÀNG 🥇";
-                        const sotiencan = (3000000 - totalSpent).toLocaleString('vi-VN');
-                        nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong class="text-info">KIM CƯƠNG 💎</strong>`;
-                        bgCard = "linear-gradient(135deg, #f1c40f, #f39c12)"; 
-                    } else if (totalSpent >= 500000) {
-                        tierName = "BẠC 🥈";
-                        const sotiencan = (1500000 - totalSpent).toLocaleString('vi-VN');
-                        nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong class="text-warning">VÀNG 🥇</strong>`;
-                        bgCard = "linear-gradient(135deg, #34495e, #2c3e50)"; 
-                    } else {
-                        tierName = "ĐỒNG 🥉";
-                        const sotiencan = (500000 - totalSpent).toLocaleString('vi-VN');
-                        nextTierText = `Tích lũy thêm <strong class="text-warning fs-6">${sotiencan} đ</strong> để mở khóa đặc quyền <strong style="color: #00f0ff; font-weight: bold;">BẠC 🥈</strong>`;
-                        bgCard = "linear-gradient(135deg, #5D5D5D, #3A3A3A)"; 
-                    }
-
-                    document.getElementById("membershipCardContainer").innerHTML = `
-                        <div class="card text-white border-0 shadow-sm p-4 rounded-4 mb-4" style="background: ${bgCard}; position: relative; overflow: hidden;">
-                            <div style="position: absolute; right: -20px; bottom: -30px; font-size: 150px; opacity: 0.08; pointer-events: none;">
-                                <i class="ti ti-crown"></i>
+                document.getElementById("membershipCardContainer").innerHTML = `
+                    <div class="card text-white border-0 shadow-sm p-4 rounded-4 mb-4" style="background: ${bgCard}; position: relative; overflow: hidden;">
+                        <div class="row align-items-center position-relative" style="z-index: 2;">
+                            <div class="col-sm-7">
+                                <span class="small fw-bold text-white-50"><i class="ti ti-crown me-1"></i> MANGIC SHOP MEMBERSHIP</span>
+                                <h2 class="fw-bold mt-2">${currentUser.fullName || currentUser.username}</h2>
+                                <div class="mt-3 text-white-50 small bg-black bg-opacity-25 py-2 px-3 rounded-3 d-inline-block">${nextTierText}</div>
                             </div>
-                            
-                            <div class="row align-items-center position-relative" style="z-index: 2;">
-                                <div class="col-sm-7">
-                                    <span class="text-uppercase small fw-bold text-white-50 d-block tracking-wider" style="letter-spacing: 1.5px; font-size: 11px;">
-                                        <i class="ti ti-crown me-1"></i> MANGIC SHOP - MEMBERSHIP CARD
-                                    </span>
-                                    <h2 class="fw-bold mt-2 mb-1" style="letter-spacing: -0.5px;">${currentUser.fullName || currentUser.username}</h2>
-                                    <div class="mt-3 text-white-50 small bg-black bg-opacity-25 py-2 px-3 rounded-3 d-inline-block border border-white border-opacity-10">
-                                        ${nextTierText}
-                                    </div>
-                                </div>
-                                <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
-                                    <span class="small d-block text-white-50 fw-semibold">HẠNG THÀNH VIÊN</span>
-                                    <h1 class="m-0 text-white" style="font-weight: 900; font-size: 2.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.4);">${tierName}</h1>
-                                    <span class="badge bg-white text-dark mt-2 px-3 py-2 fw-bold shadow-sm" style="font-size: 13px;">
-                                        <i class="ti ti-wallet me-1 text-secondary"></i> Đã chi tiêu: ${totalSpent.toLocaleString('vi-VN')} đ
-                                    </span>
-                                </div>
+                            <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+                                <span class="small text-white-50 fw-semibold">HẠNG THÀNH VIÊN</span>
+                                <h1 class="m-0 text-white" style="font-weight: 900; font-size: 2.3rem;">${tierName}</h1>
+                                <span class="badge bg-white text-dark mt-2 px-3 py-2 fw-bold shadow-sm">Đã chi tiêu: ${totalSpent.toLocaleString('vi-VN')} đ</span>
                             </div>
                         </div>
-                    `;
-                })
-                .catch(err => console.error("Lỗi tải thông tin thành viên VIP:", err));
-            }
+                    </div>`;
+            });
+        }
 
-            // 3. HÀM TẢI LỊCH SỬ ĐƠN HÀNG CHI TIẾT (ĐÃ THÊM LOGIC RATING)
-            function loadOrderHistory() {
-                fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
-                .then(res => res.json())
-                .then(orders => {
-                    const container = document.getElementById("orderHistoryContainer");
-                    container.innerHTML = ""; 
+        // 4. LOGIC LỊCH SỬ ĐƠN HÀNG + TRẢ HÀNG + ĐÁNH GIÁ
+        function loadOrderHistory() {
+            fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
+            .then(res => res.json())
+            .then(orders => {
+                const container = document.getElementById("orderHistoryContainer");
+                container.innerHTML = ""; 
+                if (orders.length === 0) {
+                    container.innerHTML = `<div class="card p-5 text-center shadow-sm"><h5>Bạn chưa có đơn hàng nào!</h5><a href="index.html" class="btn btn-dark mt-3">MUA SẮM NGAY</a></div>`;
+                    return;
+                }
 
-                    if (orders.length === 0) {
-                        container.innerHTML = `
-                            <div class="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
-                                <i class="ti ti-package text-muted mb-3" style="font-size: 50px;"></i>
-                                <h4 class="fw-bold text-secondary">Bạn chưa có đơn hàng nào!</h4>
-                                <p class="text-muted">Hãy quay lại trang chủ để chọn cho mình những bộ truyện ưng ý nhất nhé.</p>
-                                <a href="index.html" class="btn btn-dark fw-bold px-4 py-2 mt-2 mx-auto">MUA SẮM NGAY</a>
-                            </div>
-                        `;
-                        return;
+                orders.forEach(order => {
+                    let finalPaymentStatus = order.orderStatus === 'Hủy đơn' ? 'Thất bại' : order.paymentStatus; 
+                    
+                    // Phối màu Status
+                    let oStatusBadge = "bg-secondary"; 
+                    if (order.orderStatus === "Đang giao") oStatusBadge = "bg-primary text-white"; 
+                    if (order.orderStatus === "Đã giao") oStatusBadge = "bg-success text-white"; 
+                    if (order.orderStatus === "Hủy đơn") oStatusBadge = "bg-danger text-white"; 
+                    if (order.orderStatus === "Yêu cầu trả hàng") oStatusBadge = "bg-warning text-dark"; 
+                    if (order.orderStatus === "Đã trả hàng") oStatusBadge = "bg-dark text-white"; 
+
+                    let pStatusBadge = finalPaymentStatus === "Đã thanh toán" ? "bg-success text-white" : (finalPaymentStatus === "Thất bại" ? "bg-dark text-white" : "bg-warning text-dark"); 
+
+                    let itemsHtml = order.items.map(item => `
+                        <div class="d-flex justify-content-between mb-2 small border-bottom border-light">
+                            <span><i class="ti ti-book text-muted me-2"></i>${item.name} <strong>x${item.quantity}</strong></span>
+                            <span class="fw-semibold">${(item.price * item.quantity).toLocaleString('vi-VN')} đ</span>
+                        </div>`).join('');
+
+                    // Render Nút bấm (Hủy đơn / Trả hàng)
+                    let actionBtns = "";
+                    if (order.paymentMethod === 'COD' && order.orderStatus === 'Chờ xử lý') {
+                        actionBtns += `<button class="btn btn-sm btn-outline-danger fw-bold ms-2" onclick="cancelMyOrder('${order._id}', '${order.orderCode}')">Hủy đơn</button>`;
+                    }
+                    if (order.orderStatus === 'Đã giao') {
+                        actionBtns += `<button class="btn btn-sm btn-outline-warning text-dark fw-bold ms-2" onclick="requestReturnOrder('${order._id}', '${order.orderCode}')"><i class="ti ti-back-left"></i> Trả hàng</button>`;
                     }
 
-                    orders.forEach(order => {
-                        let finalPaymentStatus = order.paymentStatus; 
-                        if (order.orderStatus === 'Hủy đơn') finalPaymentStatus = 'Thất bại';
-
-                        let oStatusBadge = "bg-secondary"; 
-                        if (order.orderStatus === "Đang giao") oStatusBadge = "bg-primary text-white"; 
-                        if (order.orderStatus === "Đã giao") oStatusBadge = "bg-success text-white"; 
-                        if (order.orderStatus === "Hủy đơn") oStatusBadge = "bg-danger text-white"; 
-
-                        let pStatusBadge = "bg-warning text-dark"; 
-                        if (finalPaymentStatus === "Đã thanh toán") pStatusBadge = "bg-success text-white"; 
-                        if (finalPaymentStatus === "Thất bại") pStatusBadge = "bg-dark text-white"; 
-
-                        let itemsHtml = order.items.map(item => `
-                            <div class="d-flex justify-content-between align-items-center mb-2 small pb-1 border-bottom border-light">
-                                <span><i class="ti ti-book text-muted me-2"></i>${item.name} <strong class="text-secondary">x${item.quantity}</strong></span>
-                                <span class="fw-semibold text-dark">${(item.price * item.quantity).toLocaleString('vi-VN')} đ</span>
-                            </div>
-                        `).join('');
-
-                        const orderDate = new Date(order.createdAt).toLocaleString('vi-VN', {
-                            hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-                        });
-
-                        let cancelBtnHtml = "";
-                        if (order.paymentMethod === 'COD' && order.orderStatus === 'Chờ xử lý') {
-                            cancelBtnHtml = `<button class="btn btn-sm btn-outline-danger fw-bold px-3 ms-2 shadow-sm rounded-2" onclick="cancelMyOrder('${order._id}', '${order.orderCode}')"><i class="ti ti-close me-1"></i> Hủy đơn</button>`;
+                    // Render Đánh giá
+                    let reviewHtml = "";
+                    if (order.orderStatus === 'Đã giao' && finalPaymentStatus === 'Đã thanh toán') {
+                        if (order.rating) {
+                            const stars = '★'.repeat(order.rating) + '☆'.repeat(5 - order.rating);
+                            reviewHtml = `<div class="mt-3 p-3 bg-light rounded border"><span class="fw-bold">Đánh giá: <span class="text-warning">${stars}</span></span><br><span class="text-muted small fst-italic">"${order.reviewText}"</span></div>`;
+                        } else {
+                            reviewHtml = `<div class="mt-3 text-end"><button class="btn btn-warning fw-bold btn-sm px-3" onclick="openReviewModal('${order._id}', '${order.orderCode}')"><i class="ti ti-star"></i> Viết đánh giá</button></div>`;
                         }
+                    }
 
-                        // LOGIC ĐÁNH GIÁ ĐƠN HÀNG Ở ĐÂY
-                        let reviewHtml = "";
-                        if (order.orderStatus === 'Đã giao' && finalPaymentStatus === 'Đã thanh toán') {
-                            if (order.rating) {
-                                const stars = '★'.repeat(order.rating) + '☆'.repeat(5 - order.rating);
-                                reviewHtml = `
-                                    <div class="mt-3 p-3 bg-light rounded-3 border">
-                                        <span class="d-block fw-bold text-dark mb-1">Đánh giá của bạn: <span class="text-warning fs-5">${stars}</span></span>
-                                        <span class="text-muted small fst-italic">"${order.reviewText || 'Không có bình luận'}"</span>
-                                    </div>
-                                `;
-                            } else {
-                                reviewHtml = `
-                                    <div class="mt-3 text-end">
-                                        <button class="btn btn-warning text-dark fw-bold btn-sm shadow-sm px-3" onclick="openReviewModal('${order._id}', '${order.orderCode}')">
-                                            <i class="ti ti-star me-1"></i> Viết đánh giá
-                                        </button>
-                                    </div>
-                                `;
-                            }
-                        }
-
-                        const orderCard = `
-                            <div class="card order-card border-0 shadow-sm bg-white p-4 rounded-3">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-3 gap-2">
-                                    <div>
-                                        <span class="text-muted small">Mã đơn hàng:</span>
-                                        <span class="fw-bold text-dark fs-5 ms-1">${order.orderCode}</span>
-                                        <div class="text-muted mt-1" style="font-size: 12px;"><i class="ti ti-calendar me-1"></i>Thời gian: ${orderDate}</div>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <span class="badge ${oStatusBadge} px-3 py-2 fw-bold" style="font-size: 12px;"><i class="ti ti-truck me-1"></i>${order.orderStatus || 'Chờ xử lý'}</span>
-                                        <span class="badge ${pStatusBadge} px-3 py-2 fw-bold" style="font-size: 12px;"><i class="ti ti-wallet me-1"></i>${finalPaymentStatus}</span>
-                                    </div>
-                                </div>
-
-                                <div class="row g-4">
-                                    <div class="col-md-7 border-end">
-                                        <span class="text-muted small fw-bold mb-2 d-block">DANH SÁCH TRUYỆN ĐÃ CHỌN</span>
-                                        <div style="max-height: 150px; overflow-y: auto;" class="pe-2">${itemsHtml}</div>
-                                        ${reviewHtml} 
-                                    </div>
-                                    <div class="col-md-5" style="font-size: 13px;">
-                                        <span class="text-muted small fw-bold mb-2 d-block">ĐỊA CHỈ NHẬN HÀNG</span>
-                                        <div class="fw-bold text-dark"><i class="ti ti-user me-1 text-muted"></i>${order.shippingInfo?.fullName || 'N/A'}</div>
-                                        <div class="text-secondary mt-1"><i class="ti ti-mobile me-1 text-muted"></i>SĐT: ${order.shippingInfo?.phone || 'N/A'}</div>
-                                        <div class="text-secondary mt-1 text-truncate" style="max-width: 100%;" title="${order.shippingInfo?.address}"><i class="ti ti-location-pin me-1 text-muted"></i>ĐC: ${order.shippingInfo?.address || 'N/A'}</div>
-                                    </div>
-                                </div>
-
-                                <div class="row d-flex justify-content-between align-items-center border-top pt-3 mt-3 bg-light p-2 rounded mx-0">
-                                    <span class="col-sm-7 small text-muted px-0">Hình thức: <strong class="text-dark">${order.paymentMethod === 'QR' ? 'Chuyển khoản ngân hàng (QR)' : 'Thanh toán COD khi nhận hàng'}</strong></span>
-                                    <div class="col-sm-5 text-sm-end px-0 mt-2 mt-sm-0 d-flex align-items-center justify-content-sm-end justify-content-between">
-                                        <div><span class="text-muted small">Tổng tiền:</span> <span class="fw-bold text-danger fs-5 ms-1">${order.totalAmount.toLocaleString('vi-VN')} đ</span></div>
-                                        ${cancelBtnHtml}
-                                    </div>
+                    container.innerHTML += `
+                        <div class="card border-0 shadow-sm p-4 mb-3">
+                            <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
+                                <div><span class="text-muted small">Mã:</span> <strong class="fs-5">${order.orderCode}</strong></div>
+                                <div>
+                                    <span class="badge ${oStatusBadge} px-3 py-2">${order.orderStatus}</span>
+                                    <span class="badge ${pStatusBadge} px-3 py-2">${finalPaymentStatus}</span>
                                 </div>
                             </div>
-                        `;
-                        container.innerHTML += orderCard;
-                    });
-                })
-                .catch(err => {
-                    console.error("Lỗi:", err);
-                    document.getElementById("orderHistoryContainer").innerHTML = `<div class="alert alert-danger text-center">Gặp sự cố kết nối, không thể bốc dữ liệu lịch sử đơn!</div>`;
+                            <div class="row">
+                                <div class="col-md-7 border-end">${itemsHtml} ${reviewHtml}</div>
+                                <div class="col-md-5 small">
+                                    <strong>Nhận hàng:</strong> ${order.shippingInfo?.fullName} <br>
+                                    <strong>SĐT:</strong> ${order.shippingInfo?.phone} <br>
+                                    <strong>ĐC:</strong> ${order.shippingInfo?.address}
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between border-top pt-3 mt-3 bg-light p-2 rounded">
+                                <span class="small text-muted">Thanh toán: <strong>${order.paymentMethod}</strong></span>
+                                <div>
+                                    <span class="text-danger fw-bold fs-5">${order.totalAmount.toLocaleString('vi-VN')} đ</span>
+                                    ${actionBtns}
+                                </div>
+                            </div>
+                        </div>`;
                 });
-            }
-        });
+            });
+        }
 
-
+        // 5. CÁC HÀM XỬ LÝ (HỦY ĐƠN, TRẢ HÀNG, ĐÁNH GIÁ)
         function cancelMyOrder(orderId, orderCode) {
-            Swal.fire({
-                title: 'Xác nhận hủy đơn?',
-                text: `Bạn có chắc chắn muốn hủy đơn hàng ${orderCode} không? Tiến trình này không thể hoàn tác!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545', 
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Đồng ý hủy đơn',
-                cancelButtonText: 'Giữ lại đơn'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`${API_URL}/api/orders/${orderId}/cancel`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' }
-                    })
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.json().then(err => { throw new Error(err.error) });
-                        }
-                        return res.json();
-                    })
-                    .then(data => {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Thành công',
-                            text: data.message,
-                            confirmButtonColor: '#198754'
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    })
-                    .catch(err => {
-                        Swal.fire('Lỗi hệ thống', err.message, 'error');
+            Swal.fire({ title: 'Hủy đơn?', text: `Hủy đơn hàng ${orderCode}?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Đồng ý', cancelButtonText: 'Không' })
+            .then((res) => {
+                if (res.isConfirmed) {
+                    fetch(`${API_URL}/api/orders/${orderId}/cancel`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } })
+                    .then(r => r.json()).then(data => { Swal.fire('Xong!', data.message, 'success').then(() => loadOrderHistory()); });
+                }
+            });
+        }
+
+        function requestReturnOrder(orderId, orderCode) {
+            Swal.fire({ title: 'Yêu cầu trả hàng?', text: `Vui lòng nhắn tin cho Admin để cung cấp hình ảnh lý do sau khi xác nhận!`, icon: 'info', showCancelButton: true, confirmButtonText: 'Xác nhận trả', confirmButtonColor: '#ffbc00', cancelButtonText: 'Hủy' })
+            .then((res) => {
+                if (res.isConfirmed) {
+                    fetch(`${API_URL}/api/orders/${orderId}/request-return`, { method: 'PUT' })
+                    .then(r => r.json()).then(data => { 
+                        Swal.fire('Đã báo cáo!', data.message, 'success').then(() => {
+                            loadOrderHistory();
+                            if (document.getElementById("chat-box-container").style.display === "none") toggleChatBox();
+                        }); 
                     });
                 }
             });
         }
-        // --- CÁC HÀM XỬ LÝ SỰ KIỆN ĐÁNH GIÁ ---
+
         function openReviewModal(orderId, orderCode) {
             document.getElementById('rv-orderId').value = orderId;
             document.getElementById('rv-orderCode').innerText = "#" + orderCode;
             document.getElementById('rv-rating').value = 0;
             document.getElementById('rv-text').value = "";
-            
-            // Reset sao về màu xám
-            document.querySelectorAll('.star-btn').forEach(s => { 
-                s.innerText = '☆'; 
-                s.classList.remove('text-warning'); 
-                s.classList.add('text-muted'); 
-            });
-            
-            // Mở Modal lên
+            document.querySelectorAll('.star-btn').forEach(s => { s.innerText = '☆'; s.classList.replace('text-warning', 'text-muted'); });
             new bootstrap.Modal(document.getElementById('reviewModal')).show();
         }
 
-        // Logic tô màu 5 sao vàng
         function setRating(val) {
             document.getElementById('rv-rating').value = val;
             document.querySelectorAll('.star-btn').forEach(s => {
-                if (parseInt(s.getAttribute('data-val')) <= val) {
-                    s.innerText = '★'; 
-                    s.classList.add('text-warning'); 
-                    s.classList.remove('text-muted');
-                } else {
-                    s.innerText = '☆'; 
-                    s.classList.remove('text-warning'); 
-                    s.classList.add('text-muted');
-                }
+                let sVal = parseInt(s.getAttribute('data-val'));
+                s.innerText = sVal <= val ? '★' : '☆';
+                sVal <= val ? s.classList.replace('text-muted', 'text-warning') : s.classList.replace('text-warning', 'text-muted');
             });
         }
 
@@ -531,23 +377,14 @@
             const orderId = document.getElementById('rv-orderId').value;
             const rating = document.getElementById('rv-rating').value;
             const reviewText = document.getElementById('rv-text').value.trim();
-
-            if (rating == 0) {
-                return Swal.fire('Lưu ý', 'Vui lòng chọn số sao để đánh giá!', 'warning');
-            }
+            if (rating == 0) return Swal.fire('Lưu ý', 'Vui lòng chọn số sao!', 'warning');
 
             fetch(`${API_URL}/api/orders/${orderId}/review`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rating, reviewText })
-            })
-            .then(res => res.json())
-            .then(data => {
-                Swal.fire('Cảm ơn bạn!', data.message, 'success').then(() => window.location.reload());
-            })
-            .catch(err => Swal.fire('Lỗi', 'Không thể gửi đánh giá lúc này', 'error'));
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rating, reviewText })
+            }).then(res => res.json()).then(data => {
+                Swal.fire('Cảm ơn bạn!', 'Đánh giá đã được ghi nhận.', 'success').then(() => loadOrderHistory());
+            });
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

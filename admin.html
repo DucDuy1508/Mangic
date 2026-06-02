@@ -307,6 +307,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
     <script>
         const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ? "http://localhost:5000" : "https://mangic.onrender.com";
         let analyticsChartInstance = null;
@@ -501,7 +502,6 @@
         }
 
         // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO ---
-        // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO ---
         function loadOrdersData() {
             fetch(`${API_BASE}/api/admin/orders`)
                 .then(res => res.json())
@@ -512,6 +512,8 @@
                         else if (order.orderStatus === 'Đang giao') orderStatusBadge = `<span class="badge bg-primary py-2 px-2 rounded-pill">Đang giao 🚚</span>`;
                         else if (order.orderStatus === 'Đã giao') orderStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-pill">Đã giao hoàn tất ✓</span>`;
                         else if (order.orderStatus === 'Hủy đơn') orderStatusBadge = `<span class="badge bg-danger py-2 px-2 rounded-pill">Đã hủy đơn ❌</span>`;
+                        else if (order.orderStatus === 'Yêu cầu trả hàng') orderStatusBadge = `<span class="badge bg-warning text-dark py-2 px-2 rounded-pill shadow-sm border border-dark">🚨 YÊU CẦU TRẢ HÀNG</span>`;
+                        else if (order.orderStatus === 'Đã trả hàng') orderStatusBadge = `<span class="badge bg-dark text-white py-2 px-2 rounded-pill">Đã hoàn trả ↩️</span>`;
 
                         let paymentStatusBadge = "";
                         if (order.paymentStatus === 'Đã thanh toán') paymentStatusBadge = `<span class="badge bg-success py-2 px-2 rounded-3">Đã thanh toán ✓</span>`;
@@ -523,7 +525,21 @@
                             : `<span class="badge border border-warning text-warning fw-bold px-2 py-1"><i class="ti ti-truck me-1"></i> Ship COD</span>`;
 
                         let itemsHtml = order.items.map(item => `• <strong>${item.name}</strong> (x${item.quantity})`).join("<br>");
-                        let isFinished = order.orderStatus === 'Đã giao' || order.orderStatus === 'Hủy đơn' ? 'disabled' : '';
+                        
+                        let actionButtons = "";
+                        if (order.orderStatus === 'Yêu cầu trả hàng') {
+                            actionButtons = `
+                                <button class="btn btn-sm btn-warning fw-bold shadow-sm" onclick="executeOrderStateUpdate('${order._id}', 'Đã trả hàng', 'Hoàn tiền')"><i class="ti ti-check"></i> Duyệt Trả Hàng</button>
+                                <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đã giao', '${order.paymentStatus}')"><i class="ti ti-close"></i> Từ chối</button>
+                            `;
+                        } else {
+                            let isFinished = (order.orderStatus === 'Đã giao' || order.orderStatus === 'Hủy đơn' || order.orderStatus === 'Đã trả hàng') ? 'disabled' : '';
+                            actionButtons = `
+                                <button class="btn btn-sm btn-outline-primary fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đang giao', '${order.paymentStatus}')" ${isFinished}>Giao hàng</button>
+                                <button class="btn btn-sm btn-success fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đã giao', 'Đã thanh toán')" ${isFinished}>Đã giao</button>
+                                <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Hủy đơn', '${order.paymentStatus}')" ${isFinished}>Hủy đơn</button>
+                            `;
+                        }
 
                         // IN ĐÁNH GIÁ CỦA KHÁCH LÊN CHO ADMIN XEM MẮT
                         let reviewBadge = "";
@@ -554,10 +570,8 @@
                                 <td>${paymentStatusBadge}</td>
                                 <td>${orderStatusBadge}</td>
                                 <td>
-                                    <div class="d-flex gap-1 justify-content-center">
-                                        <button class="btn btn-sm btn-outline-primary fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đang giao', '${order.paymentStatus}')" ${isFinished}>Giao hàng</button>
-                                        <button class="btn btn-sm btn-success fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Đã giao', 'Đã thanh toán')" ${isFinished}>Đã giao</button>
-                                        <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeOrderStateUpdate('${order._id}', 'Hủy đơn', '${order.paymentStatus}')" ${isFinished}>Hủy đơn</button>
+                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                        ${actionButtons}
                                     </div>
                                 </td>
                             </tr>
@@ -687,94 +701,83 @@
         }
 
         // =================================================================
-        // 🔥 HỆ THỐNG ĐIỀU PHỐI TIN NHẮN REALTIME CLOUD - PHIÊN BẢN HOÀN THIỆN ĐẨY TOP KHÉP KÍN
+        // 🔥 HỆ THỐNG ĐIỀU PHỐI TIN NHẮN REALTIME CLOUD
         // =================================================================
 
-        // 1. LẮNG NGHE TÍN HIỆU TIN NHẮN REALTIME TỪ PHÍA KHÁCH HÀNG GỬI ĐẾN
         adminChatSocket.on('receive_message', function(msg) {
-    if (msg.sender === 'customer') {
-        if (msg.username !== currentSelectedUser) {
-            unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
-        } else {
-            unreadCounts[msg.username] = 0;
-        }
-        
-        activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
-        activeUsersOrder.unshift(msg.username); 
-        
-        // 🔥 ÉP CẬP NHẬT GIAO DIỆN NGAY LẬP TỨC KHÔNG CẦN CHỜ REFRESH
-        updateSidebarTotalBadge();
-        loadAdminChatUserList();
-    }
-    
-    if (msg.username === currentSelectedUser) {
-        appendAdminChatMessage(msg.sender, msg.text);
-    }
-});
-
-// =================================================================
-// 2. HÀM SINH DANH SÁCH CHAT - ĐÃ FIX DỨT ĐIỂM LỖI CHỚP GIẬT MÀN HÌNH
-// =================================================================
-function loadAdminChatUserList() {
-    fetch(`${API_BASE}/api/admin/customer-stats`)
-    .then(res => res.json())
-    .then(users => {
-        const listContainer = document.getElementById("adminChatUserList");
-        if (!listContainer) return;
-        
-        // Làm sạch bảng trước khi vẽ
-        listContainer.innerHTML = "";
-        
-        const customers = users.filter(u => u.username !== 'admin');
-        
-        // Khớp logic xếp hàng đợi ưu tiên (Ai chat đẩy lên top)
-        const orderedCustomers = [...customers].sort((a, b) => {
-            const indexA = activeUsersOrder.indexOf(a.username);
-            const indexB = activeUsersOrder.indexOf(b.username);
-            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-            if (indexA !== -1) return -1;
-            if (indexB !== -1) return 1;
-            return 0;
-        });
-        
-        orderedCustomers.forEach(cust => {
-            const btn = document.createElement("button");
-            const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
-            
-            // Lấy trực tiếp số đếm từ RAM, KHÔNG fetch API dư thừa gây nghẽn nữa
-            const userUnreadCount = unreadCounts[cust.username] || 0;
-            let userBadgeHtml = "";
-            
-            if (userUnreadCount > 0) {
-                userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
+            if (msg.sender === 'customer') {
+                if (msg.username !== currentSelectedUser) {
+                    unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
+                } else {
+                    unreadCounts[msg.username] = 0;
+                }
+                
+                activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
+                activeUsersOrder.unshift(msg.username); 
+                
+                updateSidebarTotalBadge();
+                loadAdminChatUserList();
             }
             
-            // Vẽ giao diện ngay lập tức
-            btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
-            btn.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="text-start text-truncate" style="max-width: 65%;">
-                        <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
-                        <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
-                    </div>
-                    <div class="text-end" id="badge-realtime-${cust.username}">
-                        ${userBadgeHtml}
-                    </div>
-                </div>
-            `;
-            
-            btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
-            listContainer.appendChild(btn);
+            if (msg.username === currentSelectedUser) {
+                appendAdminChatMessage(msg.sender, msg.text);
+            }
         });
-    })
-    .catch(err => console.error("Lỗi đồng bộ danh sách chat:", err));
-}
 
-        // 3. KHI ADMIN BẤM TIẾP NHẬN HỖ TRỢ KHÁCH HÀNG
+        function loadAdminChatUserList() {
+            fetch(`${API_BASE}/api/admin/customer-stats`)
+            .then(res => res.json())
+            .then(users => {
+                const listContainer = document.getElementById("adminChatUserList");
+                if (!listContainer) return;
+                
+                listContainer.innerHTML = "";
+                
+                const customers = users.filter(u => u.username !== 'admin');
+                
+                const orderedCustomers = [...customers].sort((a, b) => {
+                    const indexA = activeUsersOrder.indexOf(a.username);
+                    const indexB = activeUsersOrder.indexOf(b.username);
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    return 0;
+                });
+                
+                orderedCustomers.forEach(cust => {
+                    const btn = document.createElement("button");
+                    const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
+                    
+                    const userUnreadCount = unreadCounts[cust.username] || 0;
+                    let userBadgeHtml = "";
+                    
+                    if (userUnreadCount > 0) {
+                        userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
+                    }
+                    
+                    btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
+                    btn.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="text-start text-truncate" style="max-width: 65%;">
+                                <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
+                                <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
+                            </div>
+                            <div class="text-end" id="badge-realtime-${cust.username}">
+                                ${userBadgeHtml}
+                            </div>
+                        </div>
+                    `;
+                    
+                    btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
+                    listContainer.appendChild(btn);
+                });
+            })
+            .catch(err => console.error("Lỗi đồng bộ danh sách chat:", err));
+        }
+
         function selectUserToChat(username, fullName) {
             currentSelectedUser = username;
             
-            // Xóa sạch số lượng tin chưa đọc của người này vì Admin đã phản hồi / mở xem
             unreadCounts[username] = 0;
             updateSidebarTotalBadge(); 
             
@@ -790,36 +793,32 @@ function loadAdminChatUserList() {
                 const chatBody = document.getElementById("adminChatBody");
                 chatBody.innerHTML = ""; 
                 messages.forEach(msg => appendAdminChatMessage(msg.sender, msg.text));
-                loadAdminChatUserList(); // Gọi lại để xóa sạch bóng chữ đỏ đếm tin của user này
+                loadAdminChatUserList(); 
             });
         }
 
-        // 4. LỆNH PHÁT TIN NHẮN PHẢN HỒI CỦA ADMIN VÀ TỰ ĐỘNG ĐẨY TOP 1 LÊN ĐẦU DANH SÁCH
         function sendAdminReply() {
-    const adminInput = document.getElementById("adminChatInput");
-    const textContent = adminInput.value.trim();
-    if (!textContent || !currentSelectedUser) return;
+            const adminInput = document.getElementById("adminChatInput");
+            const textContent = adminInput.value.trim();
+            if (!textContent || !currentSelectedUser) return;
 
-    // Đẩy cuộc hội thoại hiện tại lên vị trí đầu tiên của hàng đợi khi Admin chat
-    activeUsersOrder = activeUsersOrder.filter(u => u !== currentSelectedUser);
-    activeUsersOrder.unshift(currentSelectedUser);
+            activeUsersOrder = activeUsersOrder.filter(u => u !== currentSelectedUser);
+            activeUsersOrder.unshift(currentSelectedUser);
 
-    adminChatSocket.emit('send_message', {
-        username: currentSelectedUser,
-        sender: 'admin',
-        text: textContent
-    });
-    
-    adminInput.value = "";
-    loadAdminChatUserList(); // Cập nhật lại giao diện đẩy top ngay 1 giây!
-}
+            adminChatSocket.emit('send_message', {
+                username: currentSelectedUser,
+                sender: 'admin',
+                text: textContent
+            });
+            
+            adminInput.value = "";
+            loadAdminChatUserList(); 
+        }
 
-        // 5. HÀM SỬA DỨT ĐIỂM LỖI HÌNH HỌC (CỘT ĐÌNH & DÀN HÀNG NGANG CHUẨN UX)
         function appendAdminChatMessage(sender, text) {
             const chatBody = document.getElementById("adminChatBody");
             const wrapperDiv = document.createElement("div");
             
-            // Thuộc tính "align-items-start" bắt buộc bóp nghẹt chiều cao dọc của khung tin nhắn con ôm khít nội dung chữ
             wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
             
             const msgDiv = document.createElement("div");
@@ -839,7 +838,6 @@ function loadAdminChatUserList() {
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
-        // 6. Hàm đồng bộ tổng số lượng tin nhắn chưa đọc lên Sidebar menu
         function updateSidebarTotalBadge() {
             let totalUnreadSum = 0;
             for (let user in unreadCounts) {
@@ -850,9 +848,9 @@ function loadAdminChatUserList() {
             if (totalBadgeElement) {
                 if (totalUnreadSum > 0) {
                     totalBadgeElement.innerText = totalUnreadSum;
-                    totalBadgeElement.style.display = "inline-block"; // Bung hiện badge đỏ rực
+                    totalBadgeElement.style.display = "inline-block"; 
                 } else {
-                    totalBadgeElement.style.display = "none"; // Ẩn biến mất nếu bằng 0
+                    totalBadgeElement.style.display = "none"; 
                 }
             }
         }

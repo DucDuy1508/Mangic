@@ -336,6 +336,25 @@ app.put('/api/orders/:id/review', async (req, res) => {
         res.status(500).json({ error: "Lỗi hệ thống khi lưu đánh giá!" });
     }
 });
+// API: KHÁCH HÀNG YÊU CẦU TRẢ HÀNG
+app.put('/api/orders/:id/request-return', async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hàng!" });
+        
+        if (order.orderStatus !== 'Đã giao') {
+            return res.status(400).json({ error: "Chỉ đơn hàng đã giao mới được yêu cầu trả!" });
+        }
+
+        // Đổi trạng thái sang Yêu cầu trả
+        order.orderStatus = 'Yêu cầu trả hàng';
+        await order.save();
+        
+        res.json({ message: "Đã báo cáo hệ thống! Vui lòng mở khung Chat để trao đổi lý do với Admin." });
+    } catch (error) {
+        res.status(500).json({ error: "Lỗi hệ thống khi xử lý trả hàng!" });
+    }
+});
 // --- [API MỚI: BỐC LẠI LỊCH SỬ TIN NHẮN CŨ KHI USER/ADMIN REFRESH TRANG] ---
 app.get('/api/chat/history/:username', async (req, res) => {
     try {
