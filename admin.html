@@ -209,6 +209,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Mã Code</th>
+                                <th>Phân Loại</th>
                                 <th>Mức Giảm (%)</th>
                                 <th>Hạn Sử Dụng</th>
                                 <th>Giới Hạn / Đã Dùng</th>
@@ -280,6 +281,14 @@
                             <input type="text" id="cp-code" class="form-control" required placeholder="Nhập mã chữ viết hoa...">
                         </div>
                         <div class="mb-3">
+                            <label class="form-label fw-bold small">Loại giảm giá</label>
+                            <select id="cp-type" class="form-select" required>
+                                <option value="total">Giảm tổng đơn hàng</option>
+                                <option value="shipping">Miễn / Giảm phí vận chuyển</option>
+                                <option value="product">Giảm theo sản phẩm cụ thể</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label fw-bold small">Phần trăm giảm giá (%)</label>
                             <input type="number" id="cp-percent" class="form-control" min="1" max="100" required>
                         </div>
@@ -313,15 +322,14 @@
         let analyticsChartInstance = null;
         let userPieChartInstance = null;
         
-        // Cấu hình ép chế độ HTTP Polling bắt buộc giúp luồng Socket chạy mượt mà xuyên suốt trên Render đám mây
         let adminChatSocket = io(API_BASE, {
             transports: ['polling', 'websocket'],
             withCredentials: true
         });
         
         let currentSelectedUser = "";        
-        let unreadCounts = {};               // Object theo dõi lưu trữ số lượng tin chưa đọc
-        let activeUsersOrder = [];           // Hàng đợi quản lý ưu tiên bay lên đầu danh sách
+        let unreadCounts = {};               
+        let activeUsersOrder = [];           
 
         document.getElementById('cp-startdate').value = new Date().toISOString().split('T')[0];
 
@@ -346,7 +354,7 @@
             if (sectionId === 'section-customer-support') loadAdminChatUserList();
         }
 
-        // --- TAB 1: DASHBOARD ---
+        // --- DASHBOARD ---
         function loadDashboardData() {
             fetch(`${API_BASE}/api/admin/dashboard-stats`)
                 .then(res => res.json())
@@ -424,14 +432,7 @@
                         }
                     ]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-                        x: { grid: { display: false } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
             });
         }
 
@@ -448,7 +449,7 @@
             });
         }
 
-        // --- TAB 2: QUẢN LÝ CRM TÀI KHOẢN ---
+        // --- CRM TÀI KHOẢN ---
         function loadCustomersManagementData() {
             fetch(`${API_BASE}/api/admin/customer-stats`)
                 .then(res => res.json())
@@ -501,7 +502,7 @@
             });
         }
 
-        // --- TAB 3: QUẢN LÝ ĐƠN HÀNG NÂNG CAO ---
+        // --- ĐƠN HÀNG ---
         function loadOrdersData() {
             fetch(`${API_BASE}/api/admin/orders`)
                 .then(res => res.json())
@@ -541,7 +542,6 @@
                             `;
                         }
 
-                        // IN ĐÁNH GIÁ CỦA KHÁCH LÊN CHO ADMIN XEM MẮT
                         let reviewBadge = "";
                         if (order.rating) {
                             const stars = '★'.repeat(order.rating) + '☆'.repeat(5 - order.rating);
@@ -588,8 +588,7 @@
                 showCancelButton: true,
                 confirmButtonColor: '#1e1e2d',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Đồng ý duyệt',
-                cancelButtonText: 'Bỏ qua'
+                confirmButtonText: 'Đồng ý duyệt'
             }).then((result) => {
                 if (result.isConfirmed) {
                     fetch(`${API_BASE}/api/admin/orders/${id}/update-status`, {
@@ -597,33 +596,30 @@
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ orderStatus: status, paymentStatus: payment })
                     })
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.json().then(err => { throw new Error(err.error) });
-                        }
-                        return res.json();
-                    })
-                    .then(data => {
-                        Swal.fire('Thành công!', data.message, 'success');
-                        loadOrdersData();
-                    })
-                    .catch(err => {
-                        Swal.fire('Lỗi logic hệ thống', err.message, 'error');
-                    });
+                    .then(res => res.json())
+                    .then(data => { Swal.fire('Thành công!', data.message, 'success'); loadOrdersData(); })
+                    .catch(err => Swal.fire('Lỗi', err.message, 'error'));
                 }
             });
         }
 
-        // --- TAB 4: COUPON ---
+        // --- COUPON VỚI CHỨC NĂNG PHÂN LOẠI MỚI ---
         function loadCouponsData() {
             fetch(`${API_BASE}/api/admin/coupons`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('table-coupons').innerHTML = data.map(cp => {
                         const hetHan = cp.endDate ? new Date(cp.endDate).toLocaleDateString('vi-VN') : 'Vô hạn';
+                        
+                        // Đặt màu Badge theo Loại giảm giá
+                        let typeBadge = '<span class="badge bg-primary">Tổng đơn</span>';
+                        if (cp.discountType === 'shipping') typeBadge = '<span class="badge bg-info text-dark">Vận chuyển</span>';
+                        if (cp.discountType === 'product') typeBadge = '<span class="badge bg-secondary">Sản phẩm</span>';
+
                         return `
                             <tr>
                                 <td class="fw-bold text-success">${cp.code}</td>
+                                <td>${typeBadge}</td>
                                 <td class="fw-bold">Giảm ${cp.discountPercent}%</td>
                                 <td class="small text-muted">${hetHan}</td>
                                 <td>${cp.usedCount} / ${cp.usageLimit} lượt</td>
@@ -636,6 +632,7 @@
 
         function createNewCoupon() {
             const code = document.getElementById('cp-code').value.toUpperCase().trim();
+            const discountType = document.getElementById('cp-type').value;
             const discountPercent = Number(document.getElementById('cp-percent').value);
             const usageLimit = Number(document.getElementById('cp-limit').value);
             const startDate = document.getElementById('cp-startdate').value;
@@ -644,7 +641,7 @@
             fetch(`${API_BASE}/api/admin/coupons`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code, discountPercent, usageLimit, startDate, endDate })
+                body: JSON.stringify({ code, discountType, discountPercent, usageLimit, startDate, endDate })
             }).then(res => {
                 if(!res.ok) throw new Error();
                 Swal.fire('Thành công', 'Đã kích hoạt mã ' + code, 'success');
@@ -672,7 +669,7 @@
             });
         }
 
-        // --- TAB 5: GIÁM SÁT TÀI KHOẢN ---
+        // --- GIÁM SÁT TÀI KHOẢN ---
         function loadUsersStatusData() {
             fetch(`${API_BASE}/api/admin/users-status`)
                 .then(res => res.json())
@@ -700,10 +697,7 @@
                 .catch(err => console.error("Lỗi load users status:", err));
         }
 
-        // =================================================================
-        // 🔥 HỆ THỐNG ĐIỀU PHỐI TIN NHẮN REALTIME CLOUD
-        // =================================================================
-
+        // --- CHAT REALTIME ---
         adminChatSocket.on('receive_message', function(msg) {
             if (msg.sender === 'customer') {
                 if (msg.username !== currentSelectedUser) {
@@ -734,7 +728,6 @@
                 listContainer.innerHTML = "";
                 
                 const customers = users.filter(u => u.username !== 'admin');
-                
                 const orderedCustomers = [...customers].sort((a, b) => {
                     const indexA = activeUsersOrder.indexOf(a.username);
                     const indexB = activeUsersOrder.indexOf(b.username);
@@ -750,10 +743,7 @@
                     
                     const userUnreadCount = unreadCounts[cust.username] || 0;
                     let userBadgeHtml = "";
-                    
-                    if (userUnreadCount > 0) {
-                        userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
-                    }
+                    if (userUnreadCount > 0) userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
                     
                     btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
                     btn.innerHTML = `
@@ -771,13 +761,11 @@
                     btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
                     listContainer.appendChild(btn);
                 });
-            })
-            .catch(err => console.error("Lỗi đồng bộ danh sách chat:", err));
+            });
         }
 
         function selectUserToChat(username, fullName) {
             currentSelectedUser = username;
-            
             unreadCounts[username] = 0;
             updateSidebarTotalBadge(); 
             
@@ -818,7 +806,6 @@
         function appendAdminChatMessage(sender, text) {
             const chatBody = document.getElementById("adminChatBody");
             const wrapperDiv = document.createElement("div");
-            
             wrapperDiv.className = "d-flex w-100 mb-2 align-items-start";
             
             const msgDiv = document.createElement("div");
@@ -840,9 +827,7 @@
 
         function updateSidebarTotalBadge() {
             let totalUnreadSum = 0;
-            for (let user in unreadCounts) {
-                totalUnreadSum += unreadCounts[user] || 0;
-            }
+            for (let user in unreadCounts) totalUnreadSum += unreadCounts[user] || 0;
             
             const totalBadgeElement = document.getElementById("sidebar-total-unread");
             if (totalBadgeElement) {
@@ -874,9 +859,7 @@
                     const user = JSON.parse(localStorage.getItem("currentUser"));
                     if (user) {
                         fetch(`${API_BASE}/api/auth/logout-status`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ username: user.username })
+                            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: user.username })
                         });
                     }
                     localStorage.removeItem("currentUser");

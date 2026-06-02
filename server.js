@@ -98,7 +98,8 @@ const CouponSchema = new mongoose.Schema({
     endDate: { type: Date },                           
     usageLimit: { type: Number, required: true },      
     usedCount: { type: Number, default: 0 },           
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    discountType: { type: String, default: 'total' } 
 });
 const Coupon = mongoose.model('Coupon', CouponSchema);
 
