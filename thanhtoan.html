@@ -168,7 +168,6 @@
             let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
             if (cart.length === 0) { window.location.href = "index.html"; return; }
 
-            // Lấy phí ship từ LocalStorage do trang Giỏ hàng truyền sang
             const shippingFee = parseInt(localStorage.getItem("tempShippingFee")) || 0;
 
             let originalTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -219,11 +218,9 @@
                 updatePriceUI();
             });
 
-            // HÀM TÍNH TOÁN CẬP NHẬT TỔNG TIỀN BAO GỒM SHIP
             function updatePriceUI() {
                 memberDiscountAmount = Math.round(originalTotal * (membershipDiscountPercent / 100));
                 
-                // Tiền cuối = Tiền gốc + Phí Ship - Mã Giảm Giá - Chiết khấu VIP
                 finalTotal = originalTotal + shippingFee - discountAmount - memberDiscountAmount;
                 if (finalTotal < 0) finalTotal = 0;
 
@@ -240,7 +237,6 @@
                 document.getElementById("txtMemberDiscount").innerText = "-" + memberDiscountAmount.toLocaleString('vi-VN') + " đ";
                 document.getElementById("txtFinalTotal").innerText = finalTotal.toLocaleString('vi-VN') + " đ";
 
-                // Cập nhật mã QR với số tiền ĐÃ CỘNG SHIP
                 const bankId = "TPB";
                 const accountNo = "00001507698";
                 const accountName = "Nguyen%20Duc%20Duy";
@@ -276,20 +272,47 @@
                             return;
                         }
 
-                        if (matchedCoupon.applicableProducts && matchedCoupon.applicableProducts.length > 0) {
-                            const hasValidProduct = cart.some(item => matchedCoupon.applicableProducts.includes(item.name));
-                            if (!hasValidProduct) {
+                        // LỌC LOGIC TÍNH GIẢM GIÁ DỰA TRÊN LOẠI COUPON
+                        let textMessage = "";
+
+                        if (matchedCoupon.discountType === 'shipping') {
+                            if (shippingFee === 0) {
                                 msg.className = "small fw-semibold mb-4 text-danger";
-                                msg.innerText = "Mã này không áp dụng cho các sản phẩm trong giỏ hàng của bạn!";
+                                msg.innerText = "Đơn hàng của bạn đã được miễn phí ship, không thể dùng mã này!";
                                 return;
                             }
+                            discountAmount = Math.round(shippingFee * (matchedCoupon.discountPercent / 100));
+                            textMessage = `Áp dụng thành công! Giảm ${matchedCoupon.discountPercent}% phí vận chuyển.`;
+
+                        } else if (matchedCoupon.discountType === 'product') {
+                            // Check xem trong giỏ có sản phẩm nào thuộc danh sách được giảm không
+                            if (matchedCoupon.applicableProducts && matchedCoupon.applicableProducts.length > 0) {
+                                const hasValidProduct = cart.some(item => matchedCoupon.applicableProducts.includes(item.name));
+                                if (!hasValidProduct) {
+                                    msg.className = "small fw-semibold mb-4 text-danger";
+                                    msg.innerText = "Mã này không áp dụng cho các sản phẩm trong giỏ hàng của bạn!";
+                                    return;
+                                }
+
+                                // Chỉ giảm giá trên tổng tiền của các sản phẩm hợp lệ
+                                let eligibleTotal = cart.filter(item => matchedCoupon.applicableProducts.includes(item.name))
+                                                        .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                discountAmount = Math.round(eligibleTotal * (matchedCoupon.discountPercent / 100));
+                            } else {
+                                // Nếu không khai báo cụ thể thì giảm như tổng đơn
+                                discountAmount = Math.round(originalTotal * (matchedCoupon.discountPercent / 100));
+                            }
+                            textMessage = `Áp dụng thành công! Giảm ${matchedCoupon.discountPercent}% cho sản phẩm khuyến mãi.`;
+
+                        } else {
+                            // Mặc định: 'total'
+                            discountAmount = Math.round(originalTotal * (matchedCoupon.discountPercent / 100));
+                            textMessage = `Áp dụng thành công! Bạn được giảm ${matchedCoupon.discountPercent}% tổng đơn hàng.`;
                         }
 
-                        discountAmount = Math.round(originalTotal * (matchedCoupon.discountPercent / 100));
                         appliedCode = code;
-
                         msg.className = "small fw-semibold mb-4 text-success";
-                        msg.innerText = `Áp dụng thành công! Bạn được giảm ${matchedCoupon.discountPercent}% từ mã giảm giá.`;
+                        msg.innerText = textMessage;
                         updatePriceUI();
 
                     } else {
@@ -360,8 +383,6 @@
             function startRealtimePaymentCheck(targetOrderCode) {
                 if (paymentCheckInterval) clearInterval(paymentCheckInterval);
                 if (!targetOrderCode) return; 
-                
-                console.log(">>> [REALTIME CHECK] Kích hoạt luồng quét ngầm đơn hàng: ", targetOrderCode);
 
                 paymentCheckInterval = setInterval(() => {
                     fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
@@ -469,7 +490,6 @@
             });
 
             function clearCartAndRedirect() {
-                // Xóa biến tạm lưu phí ship
                 localStorage.removeItem("tempShippingFee");
 
                 if (appliedCode) {
@@ -489,7 +509,7 @@
             function executeClearCart() {
                 cart = [];
                 localStorage.setItem(cartKey, JSON.stringify(cart));
-                window.location.href = "lichsu.html"; // Chuyển sang lịch sử để khách coi hóa đơn
+                window.location.href = "lichsu.html"; 
             }
         });
     </script>
