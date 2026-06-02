@@ -60,7 +60,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <span class="text-muted">Phí vận chuyển:</span>
-                        <span class="text-success fw-semibold">Miễn phí</span>
+                        <span class="fw-semibold text-end" id="shippingFeeDisplay">Đang tính...</span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -108,7 +108,6 @@
         .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
         .chat-footer { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #eee; background: white; }
         
-        /* Style tin nhắn co giãn ôm khít text chữ chặn đứng lỗi cột đình */
         .msg-box { padding: 8px 12px; border-radius: 15px; max-width: 75%; font-size: 14px; word-break: break-word; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .msg-wrapper { display: flex; width: 100%; margin-bottom: 2px; align-items: flex-start; }
         .msg-wrapper.customer { justify-content: flex-end; }
@@ -265,6 +264,10 @@
     </script>
 
     <script>
+        const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+            ? "http://localhost:5000"
+            : "https://mangic.onrender.com";
+
         document.addEventListener("DOMContentLoaded", function() {
             const currentUser = JSON.parse(localStorage.getItem("currentUser"));
             if (!currentUser) {
@@ -279,6 +282,39 @@
             const emptyMsg = document.getElementById("cartEmptyMessage");
             const cartTotalSpan = document.getElementById("cartTotal");
             const subTotalSpan = document.getElementById("subTotal");
+            const shippingFeeDisplay = document.getElementById("shippingFeeDisplay");
+
+            let shippingFee = 0;
+
+            // Chọc API để lấy tổng chi tiêu của user hiện tại tính phí ship
+            fetch(`${API_URL}/api/admin/customer-stats`)
+                .then(res => res.json())
+                .then(stats => {
+                    const myStat = stats.find(stat => stat.username === currentUser.username);
+                    const totalSpent = myStat ? myStat.totalSpent : 0;
+
+                    // Nếu chi tiêu dưới 500k (Hạng Đồng) -> Thu 30k tiền ship
+                    if (totalSpent < 500000) {
+                        shippingFee = 30000;
+                        shippingFeeDisplay.innerHTML = `30.000 đ`;
+                        shippingFeeDisplay.className = "fw-semibold text-dark text-end";
+                    } else {
+                        // Từ Hạng Bạc trở lên -> Freeship
+                        shippingFee = 0;
+                        shippingFeeDisplay.innerHTML = `<span class="text-success"><i class="ti ti-gift me-1"></i>Miễn phí (VIP)</span>`;
+                    }
+                    
+                    // Lấy xong phí ship mới bắt đầu render giỏ hàng
+                    renderCart();
+                })
+                .catch(err => {
+                    console.error("Lỗi lấy thông tin VIP:", err);
+                    // Rớt mạng thì lấy mặc định 30k ship
+                    shippingFee = 30000; 
+                    shippingFeeDisplay.innerHTML = `30.000 đ`;
+                    shippingFeeDisplay.className = "fw-semibold text-dark text-end";
+                    renderCart();
+                });
 
             function renderCart() {
                 if (cart.length === 0) {
@@ -286,16 +322,17 @@
                     emptyMsg.classList.remove("d-none");
                     cartTotalSpan.innerText = "0 đ";
                     subTotalSpan.innerText = "0 đ";
+                    shippingFeeDisplay.innerHTML = "0 đ";
                     return;
                 }
 
                 emptyMsg.classList.add("d-none");
                 tbody.innerHTML = "";
-                let totalAmount = 0;
+                let subTotalAmount = 0;
 
                 cart.forEach((item, index) => {
                     let itemTotal = item.price * item.quantity;
-                    totalAmount += itemTotal;
+                    subTotalAmount += itemTotal;
 
                     const row = `
                         <tr>
@@ -327,8 +364,11 @@
                     tbody.innerHTML += row;
                 });
 
-                cartTotalSpan.innerText = totalAmount.toLocaleString('vi-VN') + " đ";
-                subTotalSpan.innerText = totalAmount.toLocaleString('vi-VN') + " đ";
+                // TÍNH TỔNG CỘNG TIỀN HÀNG + PHÍ SHIP
+                let finalTotalAmount = subTotalAmount + shippingFee;
+
+                subTotalSpan.innerText = subTotalAmount.toLocaleString('vi-VN') + " đ";
+                cartTotalSpan.innerText = finalTotalAmount.toLocaleString('vi-VN') + " đ";
 
                 addCartEvents();
             }
@@ -359,14 +399,14 @@
                         const index = this.getAttribute("data-index");
                         
                         Swal.fire({
-                            title: 'Xóa sản phẩm khỏi giỏ hàng?',
-                            text: `Bạn có chắc chắn muốn bỏ sản phẩm "${cart[index].name}" ra khỏi giỏ hàng không?`,
+                            title: 'Xóa sản phẩm?',
+                            text: `Bỏ sản phẩm "${cart[index].name}" khỏi giỏ hàng?`,
                             icon: 'question',
                             showCancelButton: true,
                             confirmButtonColor: '#212529',
                             cancelButtonColor: '#6c757d',
-                            confirmButtonText: 'Xác nhận xóa',
-                            cancelButtonText: 'Hủy bỏ'
+                            confirmButtonText: 'Xóa',
+                            cancelButtonText: 'Hủy'
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 cart.splice(index, 1);
@@ -378,7 +418,6 @@
                 });
             }
 
-            // XỬ LÝ SỰ KIỆN BẤM NÚT TIẾN HÀNH THANH TOÁN CHUẨN
             const btnCheckout = document.getElementById("btnCheckout");
             if (btnCheckout) {
                 btnCheckout.addEventListener("click", function() {
@@ -386,19 +425,19 @@
                         Swal.fire({
                             icon: 'warning',
                             title: 'Thông báo',
-                            text: 'Giỏ hàng của bạn hiện đang trống. Vui lòng chọn sản phẩm trước khi thanh toán.',
+                            text: 'Giỏ hàng của bạn đang trống. Vui lòng chọn truyện trước khi thanh toán!',
                             confirmButtonColor: '#212529'
                         });
                         return;
                     }
 
-                    // Đẩy thẳng sang trang thanh toán QR động của mình
+                    // Lưu phí ship tạm để truyền sang trang thanhtoan.html
+                    localStorage.setItem("tempShippingFee", shippingFee);
                     window.location.href = "thanhtoan.html";
                 });
             }
-
-            renderCart();
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

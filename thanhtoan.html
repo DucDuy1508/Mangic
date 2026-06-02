@@ -14,6 +14,15 @@
 </head>
 <body class="bg-light">
 
+    <nav class="navbar navbar-expand-lg navbar-white bg-white shadow-sm mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-dark fs-4" href="index.html">MANGIC SHOP</a>
+            <a href="giohang.html" class="btn btn-sm btn-outline-dark fw-semibold">
+                <i class="ti ti-arrow-left me-1"></i> Quay lại giỏ hàng
+            </a>
+        </div>
+    </nav>
+
     <div class="container my-5">
         <div class="row justify-content-center">
             <div class="col-lg-11">
@@ -71,6 +80,10 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Tổng tiền hàng:</span>
                                     <span id="txtOriginalTotal" class="fw-bold">0 đ</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Phí vận chuyển:</span>
+                                    <span id="txtShippingFee" class="fw-semibold text-dark">0 đ</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2 text-success">
                                     <span>Giảm giá (Mã Coupon):</span>
@@ -155,6 +168,9 @@
             let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
             if (cart.length === 0) { window.location.href = "index.html"; return; }
 
+            // Lấy phí ship từ LocalStorage do trang Giỏ hàng truyền sang
+            const shippingFee = parseInt(localStorage.getItem("tempShippingFee")) || 0;
+
             let originalTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             let finalTotal = originalTotal;
             let discountAmount = 0;
@@ -203,16 +219,28 @@
                 updatePriceUI();
             });
 
+            // HÀM TÍNH TOÁN CẬP NHẬT TỔNG TIỀN BAO GỒM SHIP
             function updatePriceUI() {
                 memberDiscountAmount = Math.round(originalTotal * (membershipDiscountPercent / 100));
-                finalTotal = originalTotal - discountAmount - memberDiscountAmount;
+                
+                // Tiền cuối = Tiền gốc + Phí Ship - Mã Giảm Giá - Chiết khấu VIP
+                finalTotal = originalTotal + shippingFee - discountAmount - memberDiscountAmount;
                 if (finalTotal < 0) finalTotal = 0;
 
                 document.getElementById("txtOriginalTotal").innerText = originalTotal.toLocaleString('vi-VN') + " đ";
+                
+                const shipDisplay = document.getElementById("txtShippingFee");
+                if (shippingFee === 0) {
+                    shipDisplay.innerHTML = `<span class="text-success"><i class="ti ti-gift me-1"></i>Miễn phí</span>`;
+                } else {
+                    shipDisplay.innerText = shippingFee.toLocaleString('vi-VN') + " đ";
+                }
+
                 document.getElementById("txtDiscountAmount").innerText = "-" + discountAmount.toLocaleString('vi-VN') + " đ";
                 document.getElementById("txtMemberDiscount").innerText = "-" + memberDiscountAmount.toLocaleString('vi-VN') + " đ";
                 document.getElementById("txtFinalTotal").innerText = finalTotal.toLocaleString('vi-VN') + " đ";
 
+                // Cập nhật mã QR với số tiền ĐÃ CỘNG SHIP
                 const bankId = "TPB";
                 const accountNo = "00001507698";
                 const accountName = "Nguyen%20Duc%20Duy";
@@ -285,14 +313,14 @@
                 const paymentMethod = document.querySelector('input[name="payMethod"]:checked').value;
 
                 if (!name || !phone || !address) {
-                    Swal.fire('Thiếu thông tin', 'Vui lòng điền tên, số điện thoại và địa chỉ nhận hàng nhé!', 'warning');
+                    Swal.fire('Thiếu thông tin', 'Vui lòng điền đầy đủ tên, số điện thoại và địa chỉ nhận hàng!', 'warning');
                     return;
                 }
 
                 const orderData = {
                     username: currentUser.username,
                     items: cart,
-                    totalAmount: finalTotal,
+                    totalAmount: finalTotal, // Đã bao gồm phí ship
                     discountCode: appliedCode,
                     paymentMethod: paymentMethod,
                     orderCode: orderCode,
@@ -312,7 +340,7 @@
                         Swal.fire({
                             icon: 'success',
                             title: 'Đặt hàng thành công!',
-                            text: 'Đơn hàng COD đã ghi nhận. Shop sẽ giao tới địa chỉ của bạn sớm nhất!',
+                            text: 'Đơn hàng COD đã được ghi nhận. Shop sẽ giao tới địa chỉ của bạn sớm nhất!',
                             confirmButtonColor: '#212529'
                         }).then(() => {
                             clearCartAndRedirect();
@@ -322,7 +350,7 @@
                         document.getElementById("shipPhone").disabled = true;
                         document.getElementById("shipAddress").disabled = true;
                         document.getElementById("btnSubmitOrder").disabled = true;
-                        Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất chuyển khoản!', 'info');
+                        Swal.fire('Khởi tạo mã QR', 'Đơn hàng đã được lưu. Hãy quét mã QR ở cột bên phải để hoàn tất thanh toán!', 'info');
                         
                         startRealtimePaymentCheck(orderCode);
                     }
@@ -342,8 +370,6 @@
                         const myCurrentOrder = orders.find(o => o.orderCode === targetOrderCode);
                         
                         if (myCurrentOrder) {
-                            console.log(`>>> [REALTIME STATUS] Trạng thái đơn ${targetOrderCode}: [${myCurrentOrder.paymentStatus}]`);
-                            
                             if (myCurrentOrder.paymentStatus === 'Đã thanh toán') {
                                 clearInterval(paymentCheckInterval); 
                                 clearInterval(countdownInterval); 
@@ -351,20 +377,17 @@
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Thanh toán tự động thành công!',
-                                    text: 'Hệ thống đã ghi nhận thanh toán thành công! Mangic Shop sẽ sớm giao hàng tới địa chỉ của bạn.',
+                                    text: 'Hệ thống đã ghi nhận thanh toán! Mangic Shop sẽ sớm giao hàng tới địa chỉ của bạn.',
                                     confirmButtonColor: '#198754'
                                 }).then(() => {
                                     clearCartAndRedirect();
                                 });
                             }
-                        } else {
-                            console.log(`>>> [REALTIME WAIT] Đang đợi Database nạp đơn ${targetOrderCode}...`);
                         }
                     }).catch(err => console.log("Lỗi kết nối luồng quét ngầm..."));
                 }, 4000); 
             }
 
-            // ĐỀ SỬA TUYỆT ĐỐI: Biến nút bấm thủ công thành bộ kiểm tra số dư an toàn bảo mật, chống duyệt khống
             document.getElementById("btnConfirmPayment").addEventListener("click", function() {
                 if (!currentOrderId) {
                     Swal.fire('Thông báo', 'Vui lòng nhập thông tin nhận hàng và bấm nút Hoàn tất đặt hàng trước!', 'warning');
@@ -378,7 +401,6 @@
                     didOpen: () => { Swal.showLoading(); }
                 });
 
-                // Ép kiểm tra nghiêm ngặt: Phải quét lịch sử xem Webhook SePay đã duyệt sang "Đã thanh toán" chưa
                 setTimeout(() => {
                     fetch(`${API_URL}/api/orders/history/${currentUser.username}`)
                     .then(res => res.json())
@@ -386,24 +408,22 @@
                         const myCurrentOrder = orders.find(o => o.orderCode === orderCode);
                         
                         if (myCurrentOrder && myCurrentOrder.paymentStatus === 'Đã thanh toán') {
-                            // TIỀN ĐÃ VỀ THẬT (WEBHOOK ĐÃ DUYỆT XONG) -> CHO QUA CỬA
                             if (paymentCheckInterval) clearInterval(paymentCheckInterval);
                             clearInterval(countdownInterval);
                             
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Xác thực thành công!',
-                                text: 'Mangic Shop đã xác nhận số tiền của hóa đơn này về tài khoản ngân hàng.',
+                                text: 'Mangic Shop đã xác nhận hóa đơn này về tài khoản ngân hàng.',
                                 confirmButtonColor: '#198754'
                             }).then(() => {
                                 clearCartAndRedirect();
                             });
                         } else {
-                            // CHƯA CHUYỂN TIỀN HOẶC HACKER -> CHẶN ĐỨNG NGAY LẬP TỨC
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Chưa nhận được thanh toán!',
-                                text: 'Hệ thống đối chiếu tài khoản TPBank chưa thấy số tiền tương ứng. Nếu ông đã chuyển khoản rồi, vui lòng đợi 3-5 giây để hệ thống nhận webhook ngân hàng rồi bấm lại nhé!',
+                                text: 'Hệ thống đối chiếu tài khoản chưa thấy số tiền tương ứng. Nếu bạn đã chuyển khoản rồi, vui lòng đợi 3-5 giây để nhận webhook nhé!',
                                 confirmButtonColor: '#dc3545'
                             });
                         }
@@ -449,6 +469,9 @@
             });
 
             function clearCartAndRedirect() {
+                // Xóa biến tạm lưu phí ship
+                localStorage.removeItem("tempShippingFee");
+
                 if (appliedCode) {
                     fetch(`${API_URL}/api/admin/coupons/use`, {
                         method: 'PUT',
@@ -456,14 +479,8 @@
                         body: JSON.stringify({ code: appliedCode })
                     })
                     .then(res => res.json())
-                    .then(data => {
-                        console.log("Đã khấu trừ 1 lượt dùng thành công cho mã:", appliedCode);
-                        executeClearCart();
-                    })
-                    .catch(err => {
-                        console.error("Lỗi cập nhật số lượt dùng coupon:", err);
-                        executeClearCart(); 
-                    });
+                    .then(() => executeClearCart())
+                    .catch(() => executeClearCart());
                 } else {
                     executeClearCart();
                 }
@@ -472,9 +489,10 @@
             function executeClearCart() {
                 cart = [];
                 localStorage.setItem(cartKey, JSON.stringify(cart));
-                window.location.href = "index.html";
+                window.location.href = "lichsu.html"; // Chuyển sang lịch sử để khách coi hóa đơn
             }
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
