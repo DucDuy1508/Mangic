@@ -465,8 +465,12 @@
     if (loggedUser) {
         chatSocket = io(CHAT_SERVER, { transports: ['polling', 'websocket'], withCredentials: true });
         chatSocket.emit('join_room', loggedUser.username);
+        
         chatSocket.on('receive_message', (msg) => {
-            if (currentMode === 'admin') appendUserPageChatMessage(msg.sender, msg.text);
+            // FIX LỖI NHÂN ĐÔI: Chỉ in ra nếu tin nhắn đó do ADMIN gửi
+            if (currentMode === 'admin' && msg.sender === 'admin') {
+                appendUserPageChatMessage(msg.sender, msg.text);
+            }
         });
     }
 
