@@ -138,8 +138,11 @@
             globalChatSocket.emit('join_room', currentLoggedUser.username);
 
             globalChatSocket.on('receive_message', function(msg) {
-                if (currentMode === 'admin') appendUserPageChatMessage(msg.sender, msg.text);
-            });
+    // Chỉ in ra màn hình nếu người gửi là Admin (tin của khách đã tự in lúc bấm gửi rồi)
+    if (currentMode === 'admin' && msg.sender === 'admin') {
+        appendUserPageChatMessage(msg.sender, msg.text);
+    }
+});
         }
 
         function setChatMode(mode) {
