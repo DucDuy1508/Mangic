@@ -377,7 +377,7 @@
                             <td class="small text-muted">${act.details}</td>
                             <td class="small text-dark fw-bold">${formatFullDateTime(act.createdAt)}</td>
                         </tr>
-                    `);
+                    `).join('');
                 });
 
             fetch(`${API_BASE}/api/admin/users-status`)
@@ -409,27 +409,8 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        {
-                            label: 'Lượt xem trang (Visits)',
-                            data: visitsData,
-                            backgroundColor: 'rgba(13, 110, 253, 0.8)',
-                            borderColor: '#0d6efd',
-                            borderWidth: 1,
-                            borderRadius: 5,
-                            barPercentage: 0.4
-                        },
-                        {
-                            label: 'Hành vi Clicks',
-                            data: clicksData,
-                            type: 'line',
-                            borderColor: '#2ec4b6',
-                            backgroundColor: '#2ec4b6',
-                            pointBackgroundColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            tension: 0.3,
-                            fill: false
-                        }
+                        { label: 'Lượt xem trang (Visits)', data: visitsData, backgroundColor: 'rgba(13, 110, 253, 0.8)', borderColor: '#0d6efd', borderWidth: 1, borderRadius: 5, barPercentage: 0.4 },
+                        { label: 'Hành vi Clicks', data: clicksData, type: 'line', borderColor: '#2ec4b6', backgroundColor: '#2ec4b6', pointBackgroundColor: '#fff', pointBorderWidth: 2, pointRadius: 4, tension: 0.3, fill: false }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
@@ -441,10 +422,7 @@
             if (userPieChartInstance) userPieChartInstance.destroy();
             userPieChartInstance = new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    labels: ['Online', 'Offline'],
-                    datasets: [{ data: [online, offline], backgroundColor: ['#2ec4b6', '#cbd5e1'] }]
-                },
+                data: { labels: ['Online', 'Offline'], datasets: [{ data: [online, offline], backgroundColor: ['#2ec4b6', '#cbd5e1'] }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
@@ -482,22 +460,14 @@
 
         function handleDeleteUser(username) {
             Swal.fire({
-                title: 'Cảnh báo tối cao!',
-                text: `Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản @${username}? Hành động này sẽ xóa sạch dữ liệu giỏ hàng và không thể hoàn tác!`,
-                icon: 'error',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Xóa ngay lập tức',
-                cancelButtonText: 'Hủy bỏ'
+                title: 'Cảnh báo tối cao!', text: `Xóa vĩnh viễn tài khoản @${username}? Hành động này sẽ xóa sạch dữ liệu giỏ hàng!`, icon: 'error',
+                showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d', confirmButtonText: 'Xóa ngay lập tức', cancelButtonText: 'Hủy bỏ'
             }).then((result) => {
                 if (result.isConfirmed) {
                     fetch(`${API_BASE}/api/users/${username}`, { method: "DELETE" })
                         .then(res => res.json())
-                        .then(data => {
-                            Swal.fire('Đã triệt tiêu!', data.message, 'success');
-                            loadCustomersManagementData();
-                        }).catch(() => Swal.fire('Lỗi', 'Không thể gỡ tài khoản!', 'error'));
+                        .then(data => { Swal.fire('Đã triệt tiêu!', data.message, 'success'); loadCustomersManagementData(); })
+                        .catch(() => Swal.fire('Lỗi', 'Không thể gỡ tài khoản!', 'error'));
                 }
             });
         }
@@ -561,19 +531,12 @@
                                     <small class="text-muted"><i class="ti ti-mobile me-1"></i>${order.shippingInfo?.phone || 'N/A'}</small><br>
                                     <small class="text-muted d-inline-block text-truncate" style="max-width: 170px;" title="${order.shippingInfo?.address || 'N/A'}"><i class="ti ti-location-pin me-1"></i>${order.shippingInfo?.address || 'N/A'}</small>
                                 </td>
-                                <td class="small text-muted py-2" style="max-width: 240px; line-height: 1.5;">
-                                    ${itemsHtml}
-                                    ${reviewBadge}
-                                </td>
+                                <td class="small text-muted py-2" style="max-width: 240px; line-height: 1.5;">${itemsHtml}${reviewBadge}</td>
                                 <td class="fw-bold text-dark">${Number(order.totalAmount).toLocaleString()} đ</td>
                                 <td>${methodBadge}</td>
                                 <td>${paymentStatusBadge}</td>
                                 <td>${orderStatusBadge}</td>
-                                <td>
-                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
-                                        ${actionButtons}
-                                    </div>
-                                </td>
+                                <td><div class="d-flex gap-1 justify-content-center flex-wrap">${actionButtons}</div></td>
                             </tr>
                         `;
                     }).join('');
@@ -582,19 +545,12 @@
 
         function executeOrderStateUpdate(id, status, payment) {
             Swal.fire({
-                title: 'Xác nhận xử lý?',
-                text: `Hệ thống chuẩn bị chuyển trạng thái đơn hàng sang tiến trình [${status}].`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#1e1e2d',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Đồng ý duyệt'
+                title: 'Xác nhận xử lý?', text: `Chuyển trạng thái đơn hàng sang [${status}].`, icon: 'question',
+                showCancelButton: true, confirmButtonColor: '#1e1e2d', cancelButtonColor: '#6c757d', confirmButtonText: 'Đồng ý duyệt'
             }).then((result) => {
                 if (result.isConfirmed) {
                     fetch(`${API_BASE}/api/admin/orders/${id}/update-status`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ orderStatus: status, paymentStatus: payment })
+                        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderStatus: status, paymentStatus: payment })
                     })
                     .then(res => res.json())
                     .then(data => { Swal.fire('Thành công!', data.message, 'success'); loadOrdersData(); })
@@ -611,7 +567,6 @@
                     document.getElementById('table-coupons').innerHTML = data.map(cp => {
                         const hetHan = cp.endDate ? new Date(cp.endDate).toLocaleDateString('vi-VN') : 'Vô hạn';
                         
-                        // Đặt màu Badge theo Loại giảm giá
                         let typeBadge = '<span class="badge bg-primary">Tổng đơn</span>';
                         if (cp.discountType === 'shipping') typeBadge = '<span class="badge bg-info text-dark">Vận chuyển</span>';
                         if (cp.discountType === 'product') typeBadge = '<span class="badge bg-secondary">Sản phẩm</span>';
@@ -653,17 +608,12 @@
 
         function deleteCoupon(id) {
             Swal.fire({
-                title: 'Xóa Coupon?',
-                text: "Mã giảm giá này sẽ bị gỡ bỏ, không cho phép khách hàng nhập sử dụng nữa.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#212529',
-                confirmButtonText: 'Đồng ý xóa'
+                title: 'Xóa Coupon?', text: "Mã này sẽ bị gỡ bỏ.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#212529', confirmButtonText: 'Đồng ý xóa'
             }).then((result) => {
                 if (result.isConfirmed) {
                     fetch(`${API_BASE}/api/admin/coupons/${id}`, { method: "DELETE" }).then(() => {
-                        Swal.fire('Đã xóa', 'Gỡ mã giảm giá thành công.', 'success');
-                        loadCouponsData();
+                        Swal.fire('Đã xóa', 'Gỡ mã giảm giá thành công.', 'success'); loadCouponsData();
                     });
                 }
             });
@@ -681,41 +631,28 @@
                                 <div class="fw-bold text-dark">${user.fullName || 'Người dùng mới'}</div>
                                 <div class="small text-muted">@${user.username} <span class="badge bg-secondary">${user.role || 'customer'}</span></div>
                             </td>
-                            <td>
-                                <span class="badge bg-dark">${user.role || 'customer'}</span>
-                            </td>
+                            <td><span class="badge bg-dark">${user.role || 'customer'}</span></td>
                             <td>
                                 <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}"></span>
-                                <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">
-                                    ${user.isOnline ? 'Online' : 'Offline'}
-                                </span>
+                                <span class="${user.isOnline ? 'text-success fw-bold' : 'text-muted'} small">${user.isOnline ? 'Online' : 'Offline'}</span>
                             </td>
                             <td class="small text-dark fw-bold">${formatFullDateTime(user.lastActive)}</td>
                         </tr>
                     `).join('');
-                })
-                .catch(err => console.error("Lỗi load users status:", err));
+                });
         }
 
         // --- CHAT REALTIME ---
         adminChatSocket.on('receive_message', function(msg) {
             if (msg.sender === 'customer') {
-                if (msg.username !== currentSelectedUser) {
-                    unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
-                } else {
-                    unreadCounts[msg.username] = 0;
-                }
+                if (msg.username !== currentSelectedUser) unreadCounts[msg.username] = (unreadCounts[msg.username] || 0) + 1;
+                else unreadCounts[msg.username] = 0;
                 
                 activeUsersOrder = activeUsersOrder.filter(u => u !== msg.username);
                 activeUsersOrder.unshift(msg.username); 
-                
-                updateSidebarTotalBadge();
-                loadAdminChatUserList();
+                updateSidebarTotalBadge(); loadAdminChatUserList();
             }
-            
-            if (msg.username === currentSelectedUser) {
-                appendAdminChatMessage(msg.sender, msg.text);
-            }
+            if (msg.username === currentSelectedUser) appendAdminChatMessage(msg.sender, msg.text);
         });
 
         function loadAdminChatUserList() {
@@ -724,26 +661,20 @@
             .then(users => {
                 const listContainer = document.getElementById("adminChatUserList");
                 if (!listContainer) return;
-                
                 listContainer.innerHTML = "";
                 
                 const customers = users.filter(u => u.username !== 'admin');
                 const orderedCustomers = [...customers].sort((a, b) => {
-                    const indexA = activeUsersOrder.indexOf(a.username);
-                    const indexB = activeUsersOrder.indexOf(b.username);
+                    const indexA = activeUsersOrder.indexOf(a.username); const indexB = activeUsersOrder.indexOf(b.username);
                     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    if (indexA !== -1) return -1;
-                    if (indexB !== -1) return 1;
-                    return 0;
+                    if (indexA !== -1) return -1; if (indexB !== -1) return 1; return 0;
                 });
                 
                 orderedCustomers.forEach(cust => {
                     const btn = document.createElement("button");
                     const isActive = currentSelectedUser === cust.username ? 'active bg-dark text-white' : 'bg-white text-dark';
-                    
                     const userUnreadCount = unreadCounts[cust.username] || 0;
-                    let userBadgeHtml = "";
-                    if (userUnreadCount > 0) userBadgeHtml = `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>`;
+                    let userBadgeHtml = userUnreadCount > 0 ? `<span class="badge bg-danger rounded-pill px-2 py-1 small fw-bold shadow-sm">${userUnreadCount} tin mới</span>` : "";
                     
                     btn.className = `list-group-item list-group-item-action border-bottom py-3 rounded-2 mb-2 shadow-sm ${isActive}`;
                     btn.innerHTML = `
@@ -752,12 +683,9 @@
                                 <span class="fw-bold d-block" style="font-size: 15px;"><i class="ti ti-user me-1 text-muted"></i> ${cust.fullName}</span>
                                 <span class="small text-muted" style="font-size:12px;">@${cust.username}</span>
                             </div>
-                            <div class="text-end" id="badge-realtime-${cust.username}">
-                                ${userBadgeHtml}
-                            </div>
+                            <div class="text-end" id="badge-realtime-${cust.username}">${userBadgeHtml}</div>
                         </div>
                     `;
-                    
                     btn.onclick = () => selectUserToChat(cust.username, cust.fullName);
                     listContainer.appendChild(btn);
                 });
@@ -766,15 +694,13 @@
 
         function selectUserToChat(username, fullName) {
             currentSelectedUser = username;
-            unreadCounts[username] = 0;
-            updateSidebarTotalBadge(); 
+            unreadCounts[username] = 0; updateSidebarTotalBadge(); 
             
             document.getElementById("adminChatInput").disabled = false;
             document.getElementById("adminSendBtn").disabled = false;
             document.getElementById("adminChatHeaderTitle").innerHTML = `<i class="ti ti-headphone-alt text-warning me-2"></i> Đang kết nối hỗ trợ: <strong>${fullName}</strong> (@${username})`;
             
             adminChatSocket.emit('join_room', username);
-            
             fetch(`${API_BASE}/api/chat/history/${username}`)
             .then(res => res.json())
             .then(messages => {
@@ -793,14 +719,8 @@
             activeUsersOrder = activeUsersOrder.filter(u => u !== currentSelectedUser);
             activeUsersOrder.unshift(currentSelectedUser);
 
-            adminChatSocket.emit('send_message', {
-                username: currentSelectedUser,
-                sender: 'admin',
-                text: textContent
-            });
-            
-            adminInput.value = "";
-            loadAdminChatUserList(); 
+            adminChatSocket.emit('send_message', { username: currentSelectedUser, sender: 'admin', text: textContent });
+            adminInput.value = ""; loadAdminChatUserList(); 
         }
 
         function appendAdminChatMessage(sender, text) {
@@ -812,58 +732,33 @@
             msgDiv.className = "admin-chat-msg p-2 rounded-3";
             msgDiv.innerHTML = text;
             
-            if (sender === 'admin') {
-                wrapperDiv.className += " justify-content-end";
-                msgDiv.className += " bg-dark text-white text-end";
-            } else {
-                wrapperDiv.className += " justify-content-start";
-                msgDiv.className += " bg-warning text-dark text-start";
-            }
+            if (sender === 'admin') { wrapperDiv.className += " justify-content-end"; msgDiv.className += " bg-dark text-white text-end"; } 
+            else { wrapperDiv.className += " justify-content-start"; msgDiv.className += " bg-warning text-dark text-start"; }
             
-            wrapperDiv.appendChild(msgDiv);
-            chatBody.appendChild(wrapperDiv);
-            chatBody.scrollTop = chatBody.scrollHeight;
+            wrapperDiv.appendChild(msgDiv); chatBody.appendChild(wrapperDiv); chatBody.scrollTop = chatBody.scrollHeight;
         }
 
         function updateSidebarTotalBadge() {
             let totalUnreadSum = 0;
             for (let user in unreadCounts) totalUnreadSum += unreadCounts[user] || 0;
-            
             const totalBadgeElement = document.getElementById("sidebar-total-unread");
             if (totalBadgeElement) {
-                if (totalUnreadSum > 0) {
-                    totalBadgeElement.innerText = totalUnreadSum;
-                    totalBadgeElement.style.display = "inline-block"; 
-                } else {
-                    totalBadgeElement.style.display = "none"; 
-                }
+                if (totalUnreadSum > 0) { totalBadgeElement.innerText = totalUnreadSum; totalBadgeElement.style.display = "inline-block"; } 
+                else { totalBadgeElement.style.display = "none"; }
             }
         }
 
-        document.getElementById("adminChatInput")?.addEventListener("keypress", function(e) {
-            if (e.key === 'Enter') sendAdminReply();
-        });
+        document.getElementById("adminChatInput")?.addEventListener("keypress", function(e) { if (e.key === 'Enter') sendAdminReply(); });
 
         function handleAdminLogout() {
             Swal.fire({
-                title: 'Xác nhận đăng xuất?',
-                text: "Bạn sẽ thoát khỏi hệ thống quản trị của Mangic Shop.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#1e1e2d',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Đăng xuất',
-                cancelButtonText: 'Hủy'
+                title: 'Xác nhận đăng xuất?', text: "Thoát khỏi hệ thống quản trị.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#1e1e2d', cancelButtonColor: '#6c757d', confirmButtonText: 'Đăng xuất', cancelButtonText: 'Hủy'
             }).then((result) => {
                 if (result.isConfirmed) {
                     const user = JSON.parse(localStorage.getItem("currentUser"));
-                    if (user) {
-                        fetch(`${API_BASE}/api/auth/logout-status`, {
-                            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: user.username })
-                        });
-                    }
-                    localStorage.removeItem("currentUser");
-                    window.location.href = "../dangnhap.html";
+                    if (user) fetch(`${API_BASE}/api/auth/logout-status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: user.username }) });
+                    localStorage.removeItem("currentUser"); window.location.href = "../dangnhap.html";
                 }
             });
         }
