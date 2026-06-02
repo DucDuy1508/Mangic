@@ -762,8 +762,8 @@ Khách hàng hỏi: ${message}`
         let data;
         let isSuccess = false;
 
-        // VÒNG LẶP RETRY: Thử gọi AI tối đa 2 lần nếu bị báo bận
-        for (let i = 0; i < 2; i++) {
+        // VÒNG LẶP RETRY: Thử gọi AI tối đa 5 lần nếu bị báo bận
+        for (let i = 0; i < 5; i++) {
             const response = await fetch(url, options);
             data = await response.json();
             
